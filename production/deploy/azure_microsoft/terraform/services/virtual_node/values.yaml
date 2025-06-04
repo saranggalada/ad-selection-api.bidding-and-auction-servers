@@ -1,0 +1,52 @@
+# Portions Copyright (c) Microsoft Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Original Values: https://github.com/microsoft/virtualnodesOnAzureContainerInstances/blob/main/Helm/virtualnode/values.yaml
+
+replicaCount: 1
+admissionControllerReplicaCount: 1 # Set to 0 to also not register the admission controller webhook
+
+podAnnotations:
+  microsoft.containerinstance.virtualnode.injectkubeproxy: "false"
+  microsoft.containerinstance.virtualnode.injectdns: "false"
+
+namespace: vn2
+aciSubnetName: cg # remember this subnet needs to be delegated to Microsoft.ContainerInstance/containerGroups
+zones: '' # zone names, semi-colon separated... EG - '1;2;3'
+sandboxProviderType: OnDemand  #StandbyPool/OnDemand
+
+# By default virtual node will put its ACI resources into the same resource group as the AKS infrastructure (default AKS RG name MC_<aks rg name>_<aks cluster name>_<aks region>). However, this behavior can be controlled by updating the HELM value aciResourceGroupName
+
+# When empty the default will be used, but if overridden it should just contain the name of the desired resource group, which must exist within the same subscription as the AKS cluster virtual nodes is being used with.
+
+# IMPORTANT Customers must ensure that if this override is used that they do not reuse the same RG for multiple AKS's virtual node targets! The product is actively managing the target RG and ensuring it matches what it expects, so if multiple virtual nodes deployed to different AKS are all targeting the same aciResourceGroupName they can and will fight with each other! But this is not an issue with multiple virtual nodes within the same AKS cluster.
+
+# To use it:
+# 1. Create new RG with MI fro VN2 node pool. #
+# 2. Assign the MI Role in Private ACR to pull images.
+# 3. Give MI from AKS RG role Contributor in the new VN2 RG.
+# 4. Assign the Contributor Role for VN2 MI in AKS.
+aciResourceGroupName:
+
+standbyPool:
+#   zones: '' # zone names, semi-colon separated... EG - '1;2;3'
+#   standbyPoolsCpu: '3.5'
+#   standbyPoolsMemory: '15'
+#   maxReadyCapacity: '10'
+  ccePolicy: ''
+
+nodeLabels: "container-image=unsecure" #Labels to add when registering the node in the cluster. Labels must be key=value pairs separated by ','. Labels in the 'kubernetes.io' namespace must begin with an allowed prefix ('kubelet.kubernetes.io', 'node.kubernetes.io') or be in the specifically allowed set ('beta.kubernetes.io/arch', 'beta.kubernetes.io/instance-type', 'beta.kubernetes.io/os', 'failure-domain.beta.kubernetes.io/region', 'failure-domain.beta.kubernetes.io/zone', 'kubernetes.io/arch', 'kubernetes.io/hostname', 'kubernetes.io/os', 'node.kubernetes.io/instance-type', 'topology.kubernetes.io/region', 'topology.kubernetes.io/zone')
+
+images:
+  pullPolicy: Always

@@ -1,0 +1,5 @@
+[registries]
+edge_PublicPackages = { index = "sparse+https://microsoft.pkgs.visualstudio.com/Edge/_packaging/edge_PublicPackages/Cargo/index/" }
+
+[source.crates-io]
+replace-with = "edge_PublicPackages"

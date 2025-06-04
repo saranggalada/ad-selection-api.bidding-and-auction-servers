@@ -1,0 +1,83 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+load("//builders/bazel:deps.bzl", "python_deps")
+
+python_deps("//builders/bazel")
+
+
+
+
+
+
+
+http_archive(
+    name = "google_privacysandbox_servers_common",
+    auth_patterns = {
+
+    },
+
+    
+    sha256 = "",
+    strip_prefix = "",
+    type = "zip",
+    urls = [
+        "https://overridden.example",
+    ],
+)
+
+load(
+    "@google_privacysandbox_servers_common//third_party:cpp_deps.bzl",
+    data_plane_shared_deps_cpp = "cpp_dependencies",
+)
+
+data_plane_shared_deps_cpp()
+
+load("@google_privacysandbox_servers_common//third_party:deps1.bzl", data_plane_shared_deps1 = "deps1")
+
+data_plane_shared_deps1()
+
+load("@google_privacysandbox_servers_common//third_party:deps2.bzl", data_plane_shared_deps2 = "deps2")
+
+data_plane_shared_deps2()
+
+load("@google_privacysandbox_servers_common//third_party:deps3.bzl", data_plane_shared_deps3 = "deps3")
+
+data_plane_shared_deps3()
+
+load("@com_google_googleapis//:repository_rules.bzl", "switched_rules_by_language")
+
+switched_rules_by_language(
+    name = "com_google_googleapis_imports",
+    cc = True,
+    grpc = True,
+)
+
+http_archive(
+    name = "rapidjson",
+    build_file = "//:third_party/rapidjson.BUILD.bazel",
+    sha256 = "bf7ced29704a1e696fbccf2a2b4ea068e7774fa37f6d7dd4039d0787f8bed98e",
+    strip_prefix = "rapidjson-1.1.0",
+    url = "https://github.com/Tencent/rapidjson/archive/v1.1.0.tar.gz",
+)
+
+
+load("@com_github_grpc_grpc//bazel:grpc_deps.bzl", "grpc_deps")
+
+grpc_deps()
+
+load("@com_google_protobuf//:protobuf_deps.bzl", "protobuf_deps")
+
+protobuf_deps()

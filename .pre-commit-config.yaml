@@ -1,0 +1,209 @@
+# Copyright 2022 Google LLC
+# Copyright (C) Microsoft Corporation. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# See https://pre-commit.com for more information
+# See https://pre-commit.com/hooks.html for more hooks
+exclude:
+  (?x)^( bazel-(bin|out|testlogs|workspace)/.*| version\.txt| .*\.patch| builders/.*|
+  services/inference_sidecar/common/builders/.*| services/inference_sidecar/modules/pytorch_v2_1_1/builders/.*|
+  services/inference_sidecar/modules/tensorflow_v2_14_0/builders/.*| testing/functionaltest-system/.*|
+  google_internal/kokoro/key/.*| \.vscode/.*| msft_pipelines/.* | production/deploy/azure_microsoft/terraform/services/app/.* |
+  production/deploy/azure_microsoft/terraform/environment/demo/README.md | msft-ad-selection-api.code-workspace |
+  tools/debug/ad_selection_api/.*| .config/1espt/PipelineAutobaseliningConfig.yml| .config/guardian/.gdnbaselines|
+  tools/cost_estimation/.*| )$
+
+fail_fast: false
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: end-of-file-fixer
+      - id: fix-byte-order-marker
+      - id: mixed-line-ending
+      - id: trailing-whitespace
+        exclude: '^(msft_pipelines/|\.vscode/).*'
+      - id: check-case-conflict
+      - id: check-merge-conflict
+      - id: check-yaml
+        exclude:
+          (?x)^( production/deploy/azure/terraform/services/app/helm/templates/.*| msft_pipelines/.*| \.vscode/.* )$
+      - id: check-json
+        exclude: '^(msft_pipelines/|\.vscode/).*'
+      - id: check-symlinks
+      - id: check-added-large-files
+      - id: check-vcs-permalinks
+      - id: check-executables-have-shebangs
+      - id: detect-private-key
+        exclude:
+          (?x)^( services/common/test/artifacts/grpc_tls/localhost\.key| production/deploy/.*|
+          google_internal/kokoro/key/.* )$
+
+  - repo: https://github.com/jumanjihouse/pre-commit-hooks
+    rev: 3.0.0
+    hooks:
+      - id: git-check
+        exclude: '^(msft_pipelines/|\.vscode/|\.config/1espt/PipelineAutobaseliningConfig\.yml).*'
+      - id: script-must-not-have-extension
+        exclude: production/packaging/gcp/build_and_test.sh
+      - id: script-must-have-extension
+      - id: require-ascii
+        exclude: ^(CHANGELOG|.*RELEASE)\.md$
+      - id: shellcheck
+        files: ^$
+
+  - repo: https://github.com/bufbuild/buf
+    rev: v1.31.0
+    hooks:
+      - id: buf-format
+        args:
+          - --config
+          - api/buf.yaml
+          - api/
+
+  - repo: https://github.com/pre-commit/mirrors-clang-format
+    rev: v18.1.4
+    hooks:
+      - id: clang-format
+        types_or:
+          - c++
+          - c
+
+  - repo: local
+    hooks:
+      - id: addlicense
+        name: addlicense
+        language: golang
+        additional_dependencies:
+          - github.com/google/addlicense@v1.1.1
+        always_run: false
+        pass_filenames: true
+        entry: addlicense -v
+        types_or:
+          - text
+        exclude: (?x)^( msft_pipelines/.*| msft_pipelines/templates/.* tools/debug/ad_selection_api/.*| )$
+
+      - id: addlicense-check
+        name: addlicense check
+        language: golang
+        additional_dependencies:
+          - github.com/google/addlicense@v1.1.1
+        always_run: false
+        pass_filenames: true
+        entry: addlicense -check
+        types_or:
+          - text
+        exclude: (?x)^( msft_pipelines/.*| msft_pipelines/templates/.*| tools/debug/ad_selection_api/.*| )$
+
+      - id: terraform-fmt
+        name: terraform fmt
+        language: script
+        pass_filenames: false
+        entry: builders/tools/terraform fmt -write=true -recursive production/deploy
+        exclude: scp/
+        types_or:
+          - terraform
+
+      - id: hadolint-docker
+        name: Lint Dockerfiles
+        description: Runs hadolint via docker image to lint Dockerfiles
+        language: script
+        types: ['dockerfile']
+        entry: builders/tools/hadolint
+
+      - id: ps_vlog_123
+        name: Don't use PS_VLOG(0/1/2/3)
+        entry: sh -c '! grep --files-with-matches --recursive -E "PS_VLOG[(][0123][,)]" services/'
+        language: system
+        types_or:
+          - c++
+          - c
+        pass_filenames: false
+        always_run: false
+        fail_fast: false
+
+  - repo: https://github.com/pre-commit/mirrors-prettier
+    rev: v3.1.0
+    hooks:
+      - id: prettier
+        types_or:
+          - javascript
+          - markdown
+        exclude:
+          (?x)^( testing/functional/suts/inference/data/seller-auction-service/scoreAd\.js|
+          testing/functional/suts/.*/data/seller-auction-service/scoreAd\.js|
+          testing/functional/suts/.*/data/buyer-bidding-service/generateBid\.js|
+          testing/functional/suts/.*/.*\.reply\.json )$
+
+  - repo: https://github.com/DavidAnson/markdownlint-cli2
+    rev: v0.7.1
+    hooks:
+      - id: markdownlint-cli2
+        name: lint markdown
+
+  - repo: https://github.com/tcort/markdown-link-check
+    rev: v3.11.2
+    hooks:
+      - id: markdown-link-check
+        args:
+          - -c
+          - .markdown-link-check.json
+
+  - repo: local
+    hooks:
+      - id: buildifier
+        name: buildifier
+        description: Format bazel WORKSPACE, BUILD and .bzl files with a standard convention.
+        language: golang
+        additional_dependencies:
+          - github.com/bazelbuild/buildtools/buildifier@6.1.1
+        always_run: true
+        pass_filenames: true
+        types_or:
+          - bazel
+        entry: buildifier
+        args:
+          - -lint=fix
+          - -mode=fix
+          - -warnings=all
+
+  - repo: https://github.com/cpplint/cpplint
+    rev: 1.6.1
+    hooks:
+      - id: cpplint
+        types_or:
+          - c++
+          - c
+        args:
+          - --filter=-build/c++11,+build/c++17,-build/header_guard,-build/include_order,+build/include_what_you_use,-build/include_subdir,-readability/casting,-readability/todo,-runtime/references
+          - --quiet
+
+  - repo: https://github.com/psf/black
+    rev: 24.4.1
+    hooks:
+      - id: black
+        name: black python formatter
+
+  - repo: https://github.com/pylint-dev/pylint
+    rev: v3.1.0
+    hooks:
+      - id: pylint
+        types:
+          - python
+        args:
+          - -rn
+          - -sn
+          - --rcfile=.pylintrc
+          - --fail-on=I
+        exclude: (?x)^( google_internal/.*/preprocessor/.*\.py )$

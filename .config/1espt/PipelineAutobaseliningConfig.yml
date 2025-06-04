@@ -1,0 +1,96 @@
+# Copyright 2025 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+## DO NOT MODIFY THIS FILE MANUALLY. This is part of auto-baselining from 1ES Pipeline Templates. Go to [https://aka.ms/1espt-autobaselining] for more details.
+
+pipelines:
+  136494:
+    retail:
+      source:
+        credscan:
+          lastModifiedDate: 2024-07-04
+        eslint:
+          lastModifiedDate: 2024-07-04
+        psscriptanalyzer:
+          lastModifiedDate: 2024-07-04
+        armory:
+          lastModifiedDate: 2024-07-04
+      binary:
+        credscan:
+          lastModifiedDate: 2024-07-04
+        binskim:
+          lastModifiedDate: 2025-03-18
+        spotbugs:
+          lastModifiedDate: 2024-07-04
+    usedNonDefaultBranch: true
+  141364:
+    retail:
+      source:
+        credscan:
+          lastModifiedDate: 2024-08-14
+        eslint:
+          lastModifiedDate: 2024-08-14
+        armory:
+          lastModifiedDate: 2024-08-14
+  141680:
+    retail:
+      source:
+        credscan:
+          lastModifiedDate: 2025-03-20
+        eslint:
+          lastModifiedDate: 2025-03-20
+        psscriptanalyzer:
+          lastModifiedDate: 2025-03-20
+        armory:
+          lastModifiedDate: 2025-03-20
+      binary:
+        credscan:
+          lastModifiedDate: 2025-03-20
+        binskim:
+          lastModifiedDate: 2025-03-20
+        spotbugs:
+          lastModifiedDate: 2025-03-20
+    usedNonDefaultBranch: true
+  158573:
+    retail:
+      source:
+        credscan:
+          lastModifiedDate: 2025-03-03
+        eslint:
+          lastModifiedDate: 2025-03-03
+        psscriptanalyzer:
+          lastModifiedDate: 2025-03-03
+        armory:
+          lastModifiedDate: 2025-03-03
+  161920:
+    retail:
+      source:
+        credscan:
+          lastModifiedDate: 2025-03-07
+        eslint:
+          lastModifiedDate: 2025-03-07
+        psscriptanalyzer:
+          lastModifiedDate: 2025-03-07
+        armory:
+          lastModifiedDate: 2025-03-07
+  137506:
+    retail:
+      source:
+        eslint:
+          lastModifiedDate: 2025-03-19
+        armory:
+          lastModifiedDate: 2025-03-19
+      binary:
+        binskim:
+          lastModifiedDate: 2025-03-19

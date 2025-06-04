@@ -1,0 +1,135 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+
+
+load("//third_party:pytorch_v2_1_1_deps1.bzl", "pytorch_v2_1_1_deps1")
+load("//third_party:pytorch_v2_1_1_deps2.bzl", "pytorch_v2_1_1_deps2")
+
+pytorch_v2_1_1_deps1()
+
+pytorch_v2_1_1_deps2()
+
+
+
+
+
+
+
+http_archive(
+    name = "google_privacysandbox_servers_common",
+    auth_patterns = {
+
+    },
+
+    
+    sha256 = "",
+    strip_prefix = "",
+    type = "zip",
+    urls = [
+        "https://overridden.example",
+    ],
+)
+
+load(
+    "@google_privacysandbox_servers_common//third_party:cpp_deps.bzl",
+    data_plane_shared_deps_cpp = "cpp_dependencies",
+)
+
+data_plane_shared_deps_cpp()
+
+load("@google_privacysandbox_servers_common//third_party:deps1.bzl", data_plane_shared_deps1 = "deps1")
+
+data_plane_shared_deps1()
+
+load("@com_google_googleapis//:repository_rules.bzl", "switched_rules_by_language")
+
+switched_rules_by_language(
+    name = "com_google_googleapis_imports",
+    cc = True,
+    grpc = True,
+)
+
+
+local_repository(
+    name = "inference_common",
+    path = "../../common",
+)
+
+http_archive(
+    name = "rapidjson",
+    build_file = "@inference_common//:third_party/rapidjson.BUILD.bazel",
+    sha256 = "bf7ced29704a1e696fbccf2a2b4ea068e7774fa37f6d7dd4039d0787f8bed98e",
+    strip_prefix = "rapidjson-1.1.0",
+    url = "https://github.com/Tencent/rapidjson/archive/v1.1.0.tar.gz",
+)
+
+
+load("@com_github_grpc_grpc//bazel:grpc_deps.bzl", "grpc_deps")
+
+grpc_deps()
+
+load("@com_google_protobuf//:protobuf_deps.bzl", "protobuf_deps")
+
+protobuf_deps()
+
+load("@google_privacysandbox_servers_common//build_defs/cc/shared:sandboxed_api.bzl", "sandboxed_api")
+
+
+sandboxed_api()
+
+load("@com_google_sandboxed_api//sandboxed_api/bazel:llvm_config.bzl", "llvm_disable_optional_support_deps")
+load("@com_google_sandboxed_api//sandboxed_api/bazel:sapi_deps.bzl", "sapi_deps")
+
+llvm_disable_optional_support_deps()
+
+sapi_deps()
+
+
+load("//builders/bazel:deps.bzl", "python_deps")
+
+python_deps("//builders/bazel")
+
+http_archive(
+    name = "pybind11_bazel",
+    sha256 = "b72c5b44135b90d1ffaba51e08240be0b91707ac60bea08bb4d84b47316211bb",
+    strip_prefix = "pybind11_bazel-b162c7c88a253e3f6b673df0c621aca27596ce6b",
+    urls = ["https://github.com/pybind/pybind11_bazel/archive/b162c7c88a253e3f6b673df0c621aca27596ce6b.zip"],
+)
+
+load("@pybind11_bazel//:python_configure.bzl", "python_configure")
+
+python_configure(
+    name = "local_config_python",
+)
+
+load("@rules_python//python:pip.bzl", "pip_parse")
+
+pip_parse(
+    name = "pytorch_v2_1_1_pip_deps",
+    requirements_lock = "@pytorch_v2_1_1//:tools/build/bazel/requirements.txt",
+)
+
+load("@pytorch_v2_1_1_pip_deps//:requirements.bzl", pytorch_v2_1_1_pip_install_deps = "install_deps")
+
+pytorch_v2_1_1_pip_install_deps()
+
+load("@rules_fuzzing//fuzzing:repositories.bzl", "rules_fuzzing_dependencies")
+
+rules_fuzzing_dependencies()
+
+load("@rules_fuzzing//fuzzing:init.bzl", "rules_fuzzing_init")
+
+rules_fuzzing_init()

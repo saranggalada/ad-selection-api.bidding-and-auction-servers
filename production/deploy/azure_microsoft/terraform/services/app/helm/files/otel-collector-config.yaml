@@ -1,0 +1,60 @@
+extensions:
+    health_check:
+      endpoint: ${env:MY_POD_IP}:4316
+receivers:
+  # otlp receivers settings https://github.com/open-telemetry/opentelemetry-collector-contrib/blob/main/receiver/otelarrowreceiver/testdata/config.yaml
+  otlp:
+    protocols:
+      grpc:
+        endpoint: ${env:MY_POD_IP}:4317
+      http:
+        endpoint: ${env:MY_POD_IP}:4318
+processors:
+  batch/traces:
+    timeout: 1s
+    send_batch_size: 50
+  batch/metrics:
+    timeout: 60s
+  batch/logs:
+    timeout: 60s
+  filter/drop_event:
+    error_mode: ignore
+    logs:
+      log_record:
+        - 'attributes["ps_tee_log_type"] == "event_message"'
+  filter/drop_non_event:
+    error_mode: ignore
+    logs:
+      log_record:
+        - 'attributes["ps_tee_log_type"] != "event_message"'
+exporters:
+  debug:
+    verbosity: detailed
+  # azuremonitor exporter settings https://github.com/open-telemetry/opentelemetry-collector-contrib/blob/main/exporter/azuremonitorexporter/README.md
+  # using APPLICATIONINSIGHTS_CONNECTION_STRING environment variable
+  azuremonitor:
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [batch/traces]
+      exporters: [azuremonitor, debug]
+    metrics:
+      receivers: [otlp]
+      processors: [batch/metrics]
+      exporters: [azuremonitor]
+    logs/1:
+      receivers: [otlp]
+      processors: [batch/logs, filter/drop_event]
+      exporters: [azuremonitor]
+    logs/2:
+      receivers: [otlp]
+      processors: [filter/drop_non_event]
+      exporters: [azuremonitor]
+
+  telemetry:
+    logs:
+      level: "debug"
+
+  extensions: [health_check]

@@ -1,0 +1,8 @@
+*.patch whitespace=-trailing-space
+
+# Microsoft specific
+# Ignore trailing whitespace errors for all files in the msft_pipelines folder
+msft_pipelines/** whitespace=-trailing-space
+production/deploy/azure_microsoft/terraform/services/app/helm/templates/** whitespace=-trailing-space
+.config/** whitespace=-trailing-space
+tools/debug/ad_selection_api/ccepolicy_tool/sfe-aci-test-deployment/** whitespace=-trailing-space

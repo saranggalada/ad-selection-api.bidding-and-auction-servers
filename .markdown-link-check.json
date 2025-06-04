@@ -1,0 +1,33 @@
+{
+  "ignorePatterns": [
+    {
+      "pattern": "^tg/"
+    },
+    {
+      "pattern": "^http://go/"
+    },
+    {
+      "pattern": "^/tools/"
+    },
+    {
+      "pattern": "specs/udf_interface.proto"
+    },
+    {
+      "pattern": "udf/Communication%20Interface.md"
+    },
+    {
+      "pattern": "udf/Execution%20Environment%20and%20Interface.md"
+    }
+  ],
+  "replacementPatterns": [
+    {
+      "pattern": "^/",
+      "replacement": "{{BASEURL}}/"
+    }
+  ],
+  "timeout": "20s",
+  "retryOn429": true,
+  "retryCount": 5,
+  "fallbackRetryDelay": "30s",
+  "aliveStatusCodes": [200, 206]
+}

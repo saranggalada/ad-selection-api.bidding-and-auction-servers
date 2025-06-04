@@ -1,0 +1,104 @@
+{
+  "adRenderURL": "http://foo.com/ad",
+  "components": ["http://foo/com/ad/component1", "http://foo/com/ad/component2"],
+  "interestGroupName": "ad_loving_group",
+  "interestGroupOwner": "ad_showing_company",
+  "biddingGroups": {
+    "https://ad_showing_company_1.com:1234": [0, 5, 6],
+    "https://ad_showing_company_2.com:321": [0, 2, 6]
+  },
+  "score": 2.12,
+  "bid": 1.32,
+  "isChaff": false,
+  "winReportingURLs": {
+    "buyerReportingURLs": {
+      "reportingURL": "http://buying-ad-tech.com/report/ad1",
+      "interactionReportingURLs": {
+        "key1": "uri1"
+      }
+    },
+    "componentSellerReportingURLs": {
+      "reportingURL": "http://selling-ad-tech.com/report/ad1-component-1",
+      "interactionReportingURLs": {
+        "key1": "uri2"
+      }
+    },
+    "topLevelSellerReportingURLs": {
+      "reportingURL": "http://toplevelseller.com/report/ad1",
+      "interactionReportingURLs": {
+        "key1": "uri3"
+      }
+    }
+  },
+  "debugReports": [
+    {
+      "adTechOrigin": "adtech-origin",
+      "reports": [
+        {
+          "isWinReport": true,
+          "isSellerReport": true,
+          "componentWin": true,
+          "url": "http://selling-ad-tech.com/debugWin/ad1"
+        }
+      ]
+    }
+  ],
+  "error": {
+    "code": 0,
+    "message": "Success"
+  },
+  "kAnonWinnerJoinCandidates": {
+    "adRenderURLHash": "ad-render-url-hash",
+    "adComponentRenderURLsHash": ["ad-component-render-urls-hash"],
+    "reportingIdHash": "reporting-id-hash"
+  },
+  "kAnonWinnerPositionalIndex": 0,
+  "kAnonGhostWinners": [
+    {
+      "kAnonJoinCandidates": {
+        "adRenderURLHash": "ad-render-url-hash",
+        "adComponentRenderURLsHash": ["ad-component-render-urls-hash"],
+        "reportingIdHash": "reporting-id-hash"
+      },
+      "interestGroupIndex": 23,
+      "owner": "test-owner",
+      "ghostWinnerPrivateAggregationSignals": {
+        "bucket": "a-test-bucket",
+        "value": 51
+      },
+      "ghostWinnerForTopLevelAuction": {
+        "adRenderURL": "an-ad-render-url",
+        "adComponentRenderURLs": ["ad-component-render-url1"],
+        "modifiedBid": 123.1234,
+        "bidCurrency": "USD",
+        "adMetadata": "arbitrary-data",
+        "buyerReportingId": "buyer-reporting-test-id",
+        "buyerAndSellerReportingId": "test-id",
+        "selectedBuyerAndSellerReportingId": "selected-buyer-and-seller-test-id"
+      }
+    }
+  ],
+  "paggResponse": [
+    {
+      "reportingOrigin": "adtech-origin",
+      "igContributions": [
+        {
+          "eventContributions": [
+            {
+              "event": "customEvent",
+              "contributions": [
+                {
+                  "bucket": "0x0000000000000064",
+                  "value": 100
+                }
+              ]
+            }
+          ],
+          "igIndex": 123,
+          "coordinator": "seller-coordinator-for-device-orchestrated-auction",
+          "componentWin": false
+        }
+      ]
+    }
+  ]
+}

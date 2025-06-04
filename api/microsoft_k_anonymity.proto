@@ -1,0 +1,128 @@
+// Copyright (C) Microsoft Corporation. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+syntax = "proto3";
+
+package microsoft.k_anonymity.proto;
+
+import "google/api/annotations.proto";
+import "google/protobuf/empty.proto";
+import "src/logger/logger.proto";
+
+// K-Anonymity service operated by buyer.
+service KAnonymity {
+  // Endpoint for a caller to query if a given set is already k-anonymous or not.
+  // This implies the set contains at least `k` unique members that have already
+  // joined and are still valid. Multiple sets may be queried together.
+  rpc Query(QueryRequest) returns (QueryResponse) {
+    option (google.api.http) = {
+      post: "/v1/querykanonymity"
+      body: "*"
+    };
+  }
+
+  // Endpoint for a caller to request a request join or otherwise count towards
+  // a k-anonymity set. Typically a user or device must be uniquely identifiable
+  // to ensure they are not over/under counted as a distinct member of a given set.
+  rpc Join(JoinRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      post: "/v1/joinkanonymity"
+      body: "*"
+    };
+  }
+}
+
+// Types of k-anon sets we can keep or query.
+enum KANONDataType {
+  UNKNOWN = 0;
+  CREATIVE = 1;
+  // Future types defined here.
+}
+
+// A request to query if a given hash/set is already k-anonymous. Multiple sets may
+// be queried together.
+message QueryRequest {
+  // Unencrypted request; this is used after transit by the sending/receiving service.
+  message QueryRawRequest {
+    // A single data type must be specified and all queries in a given call should be
+    // of the same type.
+    KANONDataType data_type = 1;
+
+    // One or more instance hash of the sets to check for k-anonymity. A response value
+    // will be provided for every instance provided.
+    repeated string instance_hash = 2;
+
+    // Helpful context for logging and tracing the request.
+    privacy_sandbox.server_common.LogContext log_context = 98;
+
+    // Consented debugging field.
+    privacy_sandbox.server_common.ConsentedDebugConfiguration consented_debug_config = 99;
+  }
+
+  // Encrypted QueryRawRequest. This is what is populated and transmitted between services.
+  bytes request_ciphertext = 1;
+
+  // Version of the public key used for request encryption. The service
+  // needs use private keys corresponding to same key_id to decrypt
+  // 'request_ciphertext'.
+  string key_id = 2;
+}
+
+// Encrypted response to QueryRawRequest with k-anon results corresponding to the
+// queried instance_hash(es)
+message QueryResponse {
+  // Unencrypted response.
+  message QueryRawResponse {
+    // k-anon result corresponding to the queried instance_hash of Query.
+    repeated bool is_k_anonymous = 1;
+
+    // Debug logs for bidding servers (only in non_prod)
+    privacy_sandbox.server_common.DebugInfo debug_info = 99;
+  }
+
+  // Encrypted QueryRawResponse, no key-id is required as this has already been negotiated.
+  bytes response_ciphertext = 1;
+}
+
+// A request to join a given k-anon set. A given unique caller can only be counted once per
+// type/set while valid. After a period of time membership to a set becomes stale and will
+// falloff without any subsequent re-join action.
+message JoinRequest {
+  // Unencrypted request; this is used after transit by the sending/receiving service.
+  message JoinRawRequest {
+    // A unique string/identifier representing a distinct browser instance that is trying
+    // to join a set for k-anonymity purposes.
+    string browser = 1;
+
+    // The type of data set being joined.
+    KANONDataType data_type = 2;
+
+    // The specific instance hash of the set being joined.
+    string instance_hash = 3;
+
+    // Helpful context for logging and tracing the request.
+    privacy_sandbox.server_common.LogContext log_context = 98;
+
+    // Consented debugging field.
+    privacy_sandbox.server_common.ConsentedDebugConfiguration consented_debug_config = 99;
+  }
+
+  // Encrypted QueryJoinRawRequest. This is what is populated and transmitted between services.
+  bytes request_ciphertext = 1;
+
+  // Version of the public key used for request encryption. The service
+  // needs use private keys corresponding to same key_id to decrypt
+  // 'request_ciphertext'.
+  string key_id = 2;
+}

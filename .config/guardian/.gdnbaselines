@@ -1,0 +1,141 @@
+{
+  "properties": {
+    "helpUri": "https://eng.ms/docs/microsoft-security/security/azure-security/cloudai-security-fundamentals-engineering/security-integration/guardian-wiki/microsoft-guardian/general/baselines"
+  },
+  "version": "1.0.0",
+  "baselines": {
+    "default": {
+      "name": "default",
+      "createdDate": "2025-03-03 10:26:20Z",
+      "lastUpdatedDate": "2025-03-03 10:26:20Z"
+    }
+  },
+  "results": {
+    "929c40f933767f6dfe1e4e7758ecf1f394124f2d245fe52340d06be4ab2a6e9c": {
+      "signature": "929c40f933767f6dfe1e4e7758ecf1f394124f2d245fe52340d06be4ab2a6e9c",
+      "alternativeSignatures": [],
+      "target": "privacysandbox.coordinator-services-and-shared-libraries/licenses/3-clause bsd license - bsd-3-clause.html",
+      "line": 398,
+      "memberOf": [
+        "default"
+      ],
+      "tool": "credscan",
+      "ruleId": "CSCAN-GENERAL0060",
+      "createdDate": "2025-03-03 10:26:20Z",
+      "expirationDate": "2025-08-20 10:28:36Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2025-03-03 10:28:36Z"
+    },
+    "e055372ffad74dff13613d45935bc744ae1847e3d5068bf0e922fe22346b8a5d": {
+      "signature": "e055372ffad74dff13613d45935bc744ae1847e3d5068bf0e922fe22346b8a5d",
+      "alternativeSignatures": [],
+      "target": "privacysandbox.coordinator-services-and-shared-libraries/licenses/apache 2.0 - apache-2.0.html",
+      "line": 474,
+      "memberOf": [
+        "default"
+      ],
+      "tool": "credscan",
+      "ruleId": "CSCAN-GENERAL0060",
+      "createdDate": "2025-03-03 10:26:20Z",
+      "expirationDate": "2025-08-20 10:28:36Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2025-03-03 10:28:36Z"
+    },
+    "f33a48721aeee0a9ee95550e0b425e330f664cae8f5558ccfa1cbca042d93590": {
+      "signature": "f33a48721aeee0a9ee95550e0b425e330f664cae8f5558ccfa1cbca042d93590",
+      "alternativeSignatures": [],
+      "target": "privacysandbox.coordinator-services-and-shared-libraries/licenses/bsd new license - bsd-3-clause.html",
+      "line": 398,
+      "memberOf": [
+        "default"
+      ],
+      "tool": "credscan",
+      "ruleId": "CSCAN-GENERAL0060",
+      "createdDate": "2025-03-03 10:26:20Z",
+      "expirationDate": "2025-08-20 10:28:36Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2025-03-03 10:28:36Z"
+    },
+    "7699f67c9265eef615af234d58082f7d17617abec0956b48a5d72163a75c062d": {
+      "signature": "7699f67c9265eef615af234d58082f7d17617abec0956b48a5d72163a75c062d",
+      "alternativeSignatures": [],
+      "target": "privacysandbox.coordinator-services-and-shared-libraries/licenses/new bsd license - bsd-license.html",
+      "line": 396,
+      "memberOf": [
+        "default"
+      ],
+      "tool": "credscan",
+      "ruleId": "CSCAN-GENERAL0060",
+      "createdDate": "2025-03-03 10:26:20Z",
+      "expirationDate": "2025-08-20 10:28:36Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2025-03-03 10:28:36Z"
+    },
+    "60aa76b15a5ff85b0945d5150927f48cca0028f87a3c3cf1c01540de069e2a3a": {
+      "signature": "60aa76b15a5ff85b0945d5150927f48cca0028f87a3c3cf1c01540de069e2a3a",
+      "alternativeSignatures": [],
+      "target": "privacysandbox.coordinator-services-and-shared-libraries/licenses/the mit license - mit-license.html",
+      "line": 405,
+      "memberOf": [
+        "default"
+      ],
+      "tool": "credscan",
+      "ruleId": "CSCAN-GENERAL0060",
+      "createdDate": "2025-03-03 10:26:20Z",
+      "expirationDate": "2025-08-20 10:28:36Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2025-03-03 10:28:36Z"
+    },
+    "bd91499dff5d8d23830de5fbe2425e1fc32706f5ef6f8d1fef6dbf9725bcd674": {
+      "signature": "bd91499dff5d8d23830de5fbe2425e1fc32706f5ef6f8d1fef6dbf9725bcd674",
+      "alternativeSignatures": [],
+      "target": "privacysandbox.coordinator-services-and-shared-libraries/licenses/the mit license - mit.html",
+      "line": 405,
+      "memberOf": [
+        "default"
+      ],
+      "tool": "credscan",
+      "ruleId": "CSCAN-GENERAL0060",
+      "createdDate": "2025-03-03 10:26:20Z",
+      "expirationDate": "2025-08-20 10:28:36Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2025-03-03 10:28:36Z"
+    },
+    "57272c2c13fbcbace3adccf2696cc17e50c9743ee8e7213949e7e28dc76cde47": {
+      "signature": "57272c2c13fbcbace3adccf2696cc17e50c9743ee8e7213949e7e28dc76cde47",
+      "alternativeSignatures": [],
+      "target": "privacysandbox.coordinator-services-and-shared-libraries/javatests/com/google/scp/shared/gcp/util/CloudFunctionServiceBaseTest.java",
+      "line": 80,
+      "memberOf": [
+        "default"
+      ],
+      "tool": "credscan",
+      "ruleId": "CSCAN-AZURE0140",
+      "createdDate": "2025-03-03 10:26:20Z",
+      "expirationDate": "2025-08-20 10:28:36Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2025-03-03 10:28:36Z"
+    },
+    "7bd7da7996e652b670badd386f047df474836346f88fde7d4c42f020fc2cc93f": {
+      "signature": "7bd7da7996e652b670badd386f047df474836346f88fde7d4c42f020fc2cc93f",
+      "alternativeSignatures": [],
+      "target": "privacysandbox.coordinator-services-and-shared-libraries/javatests/com/google/scp/shared/gcp/util/CloudFunctionServiceBaseTest.java",
+      "line": 85,
+      "memberOf": [
+        "default"
+      ],
+      "tool": "credscan",
+      "ruleId": "CSCAN-AZURE0140",
+      "createdDate": "2025-03-03 10:26:20Z",
+      "expirationDate": "2025-08-20 10:28:36Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2025-03-03 10:28:36Z"
+    },
+    "c0c1bbd1ac04ca2ca16185067be65eb4000b4c7b30a0c265f25f2572bac3c49a": {
+      "signature": "c0c1bbd1ac04ca2ca16185067be65eb4000b4c7b30a0c265f25f2572bac3c49a",
+      "alternativeSignatures": [],
+      "target": "privacysandbox.coordinator-services-and-shared-libraries/javatests/com/google/scp/shared/gcp/util/CloudFunctionServiceBaseTest.java",
+      "line": 90,
+      "memberOf": [
+        "default"
+      ],
+      "tool": "credscan",
+      "ruleId": "CSCAN-AZURE0140",
+      "createdDate": "2025-03-03 10:26:20Z",
+      "expirationDate": "2025-08-20 10:28:36Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2025-03-03 10:28:36Z"
+    }
+  }
+}

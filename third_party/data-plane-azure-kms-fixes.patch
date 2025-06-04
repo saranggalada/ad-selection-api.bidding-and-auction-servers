@@ -1,0 +1,58 @@
+diff --git a/src/azure/attestation/src/sev5.cc b/src/azure/attestation/src/sev5.cc
+index b91e949a..8acc704c 100644
+--- a/src/azure/attestation/src/sev5.cc
++++ b/src/azure/attestation/src/sev5.cc
+@@ -56,7 +56,10 @@ struct Request {
+ 
+ std::unique_ptr<SnpReport> getReport(const std::string report_data) {
+   SnpRequest request = {};
+-  auto decoded_bytes = absl::HexStringToBytes(report_data);
++  // 'HexStringToBytes' is deprecated: Use the HexStringToBytes() that returns a bool
++  std::string decoded_bytes;
++  bool success = absl::HexStringToBytes(report_data, &decoded_bytes);
++  CHECK(success) << "Failed to decode hex string from report_data";
+   size_t num_bytes_to_copy =
+       std::min(decoded_bytes.size(), sizeof(request.report_data));
+   std::copy(decoded_bytes.begin(), decoded_bytes.begin() + num_bytes_to_copy,
+diff --git a/src/azure/attestation/src/sev6.cc b/src/azure/attestation/src/sev6.cc
+index 3a805938..b6c8e2c5 100644
+--- a/src/azure/attestation/src/sev6.cc
++++ b/src/azure/attestation/src/sev6.cc
+@@ -56,7 +56,10 @@ struct RequestWrapper {
+ 
+ std::unique_ptr<SnpReport> getReport(const std::string report_data) {
+   SnpRequest request = {};
+-  auto decoded_bytes = absl::HexStringToBytes(report_data);
++  // 'HexStringToBytes' is deprecated: Use the HexStringToBytes() that returns a bool
++  std::string decoded_bytes;
++  bool success = absl::HexStringToBytes(report_data, &decoded_bytes);
++  CHECK(success) << "Failed to decode hex string from report_data";
+   size_t num_bytes_to_copy =
+       std::min(decoded_bytes.size(), sizeof(request.report_data));
+   std::copy(decoded_bytes.begin(), decoded_bytes.begin() + num_bytes_to_copy,
+diff --git a/src/cpio/client_providers/private_key_fetcher_provider/azure/BUILD.bazel b/src/cpio/client_providers/private_key_fetcher_provider/azure/BUILD.bazel
+index 3abd6751..106f8659 100644
+--- a/src/cpio/client_providers/private_key_fetcher_provider/azure/BUILD.bazel
++++ b/src/cpio/client_providers/private_key_fetcher_provider/azure/BUILD.bazel
+@@ -94,6 +94,7 @@ cc_test(
+     size = "small",
+     srcs = ["azure_private_key_fetcher_provider_test.cc"],
+     deps = [
++        ":nontee_azure_private_key_fetcher_provider_utils",
+         "//src/core/async_executor/mock:core_async_executor_mock",
+         "//src/core/http2_client/mock:http2_client_mock",
+         "//src/core/interface",
+diff --git a/src/cpio/client_providers/private_key_fetcher_provider/azure/azure_private_key_fetcher_provider.cc b/src/cpio/client_providers/private_key_fetcher_provider/azure/azure_private_key_fetcher_provider.cc
+index 61bb9a49..66029f13 100644
+--- a/src/cpio/client_providers/private_key_fetcher_provider/azure/azure_private_key_fetcher_provider.cc
++++ b/src/cpio/client_providers/private_key_fetcher_provider/azure/azure_private_key_fetcher_provider.cc
+@@ -259,7 +259,8 @@ std::unique_ptr<PrivateKeyFetcherProviderInterface>
+ PrivateKeyFetcherProviderFactory::Create(
+     HttpClientInterface* http_client,
+     RoleCredentialsProviderInterface* role_credentials_provider,
+-    AuthTokenProviderInterface* auth_token_provider) {
++    AuthTokenProviderInterface* auth_token_provider,
++    privacy_sandbox::server_common::log::PSLogContext& log_context) {
+   return std::make_unique<AzurePrivateKeyFetcherProvider>(http_client,
+                                                           auth_token_provider);
+ }

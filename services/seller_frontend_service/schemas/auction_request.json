@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "/BuyerInput/AuctionBlob",
+  "type": "object",
+  "properties": {
+    "version": { "type": "number" },
+    "publisher": { "type": "string" },
+    "interestGroups": {
+      "patternProperties": {
+        "^https://": {
+          "type": "string",
+          "description": "CBOR encoded list of interest groups compressed using the method described in `compression`."
+        }
+      },
+      "additionalProperties": false
+    },
+    "generationId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "enableDebugReporting": { "type": "boolean" },
+    "requestTimestampMs": { "type": "number" },
+    "enforceKAnon": { "type": "boolean" }
+  },
+  "required": ["version", "interestGroups", "publisher", "generationId"],
+  "additionalProperties": false
+}

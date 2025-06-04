@@ -1,0 +1,62 @@
+#!/usr/bin/env bash
+# Copyright 2024 Google LLC
+
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+source $(dirname "$0")/common
+
+BUYER_KV_SERVER_ADDR="${BUYER_KV_SERVER_ADDR:-}"
+BUYER_TKV_V2_SERVER_ADDR="${BUYER_TKV_V2_SERVER_ADDR:-}"
+BIDDING_SERVER_ADDR="${BIDDING_SERVER_ADDR:-127.0.0.1:${BIDDING_PORT}}"
+BIDDING_SIGNALS_FETCH_MODE="${BIDDING_SIGNALS_FETCH_MODE:-"REQUIRED"}"
+
+SERVICE_NAME=buyer_frontend
+BIN=${SERVICE_NAME}
+if [[ -z $1 ]]; then
+  # When we load from .tar file, we don't mount the binary
+  # and it is embededd as "server"
+  BIN="server"
+fi
+
+SERVER_START_CMD=$(cat << END
+/server/bin/${BIN} \
+--init_config_client="false" \
+--port=${BFE_PORT} \
+--https_fetch_skips_tls_verification="${SKIP_TLS_VERIFICATION}" \
+"${SELLER_CODE_FETCH_CONFIG}" \
+--bidding_server_addr="${BIDDING_SERVER_ADDR}" \
+--buyer_kv_server_addr="${BUYER_KV_SERVER_ADDR}" \
+--buyer_tkv_v2_server_addr="${BUYER_TKV_V2_SERVER_ADDR}" \
+--bidding_signals_fetch_mode="${BIDDING_SIGNALS_FETCH_MODE}" \
+--enable_buyer_frontend_benchmarking="true" \
+--generate_bid_timeout_ms=60000 \
+--bidding_signals_load_timeout_ms 60000 \
+--protected_app_signals_generate_bid_timeout_ms=60000 \
+--create_new_event_engine="false" \
+--test_mode="true" \
+--telemetry_config="${TELEMETRY_CONFIG}" \
+--enable_otel_based_logging="true" \
+--consented_debug_token="test_token" \
+--ps_verbosity=${PS_VERBOSITY} \
+--enable_chaffing="false" \
+--enable_kanon=${ENABLE_KANON} \
+--enable_protected_audience=${ENABLE_PROTECTED_AUDIENCE} \
+--bfe_tcmalloc_background_release_rate_bytes_per_second=4096 \
+--bfe_tcmalloc_max_total_thread_cache_bytes=10737418240 \
+--enable_protected_app_signals=${ENABLE_PROTECTED_APP_SIGNALS} \
+--enable_tkv_v2_browser=${ENABLE_TKV_V2_BROWSER} && exit
+END
+)
+
+PROF_PORT="${PROF_PORT:-1235}"
+run_server "$1" "${SERVICE_NAME}" "${SERVER_START_CMD}" ${PROF_PORT}

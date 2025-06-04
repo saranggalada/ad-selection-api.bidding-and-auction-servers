@@ -1,0 +1,63 @@
+#!/busybox/sh
+# Portions Copyright (c) Microsoft Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+#This is our server startup
+
+set -o errexit
+set -x
+
+#########################################################################
+#                                                                       #
+#                            Envoy Startup                              #
+#                                                                       #
+#########################################################################
+# Get access token from local managed identity running this container.
+if [ "${AZURE_KEYVAULT_NAME}" ]; then
+  export ACCESS_TOKEN=$(wget -q --header "Metadata: true" --output-document -  \
+  "http://169.254.169.254/metadata/identity/oauth2/token?api-version=2018-02-01&resource=https%3A%2F%2Fvault.azure.net" \
+  | /server/bin/jq -r '.access_token')
+
+  # Get our secrets, parse, decode, and write the secret strings to files that the Envoy config will read.
+  ## TLS Cert
+  wget -q --header "Authorization: Bearer ${ACCESS_TOKEN}" --output-document - \
+  https://${AZURE_KEYVAULT_NAME}.vault.azure.net/certificates/${AZURE_CERT}?api-version=7.4 \
+  | /server/bin/jq -r ".cer" \
+  | base64 -d > /etc/envoy/cert.cer
+  openssl x509 -inform der -in /etc/envoy/cert.cer -outform PEM -out /etc/envoy/cert.pem
+
+  ## TLS Key
+  wget -q --header "Authorization: Bearer ${ACCESS_TOKEN}" --output-document - \
+  https://${AZURE_KEYVAULT_NAME}.vault.azure.net/secrets/${AZURE_CERT}?api-version=7.4 \
+  | /server/bin/jq -r ".value" \
+  > /etc/envoy/key.pem
+
+  # Start envoy.
+  /usr/local/bin/envoy --config-path /etc/envoy/envoy.yaml -l warn &
+  sleep 2
+fi
+
+#########################################################################
+#                                                                       #
+#                             SFE Startup                               #
+#                                                                       #
+#########################################################################
+
+
+export GLOG_logtostderr=1
+export GLOG_stderrthreshold=0
+export GRPC_DNS_RESOLVER=native
+
+# Start the server or else?
+/server/bin/server --init_config_client=true

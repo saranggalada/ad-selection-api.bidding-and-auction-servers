@@ -1,0 +1,160 @@
+// Copyright 2023 Google LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+syntax = "proto3";
+
+package privacy_sandbox.bidding_auction_servers.inference;
+
+service InferenceService {
+  // Runs inference.
+  rpc Predict(PredictRequest) returns (PredictResponse) {
+  }
+  // Registers model.
+  rpc RegisterModel(RegisterModelRequest) returns (RegisterModelResponse) {
+  }
+  // Deletes a model.
+  rpc DeleteModel(DeleteModelRequest) returns (DeleteModelResponse) {
+  }
+  // Gets model paths for successfully registered models.
+  rpc GetModelPaths(GetModelPathsRequest) returns (GetModelPathsResponse) {
+  }
+}
+
+message PredictRequest {
+  // Input data.
+  bytes input = 1;
+  // Should consented logs be collected for the given predict request.
+  bool is_consented = 2;
+}
+
+// Response for PredictRequest on a successful run.
+message PredictResponse {
+  // Output data.
+  bytes output = 1;
+  // Consented debugging log.
+  InferenceDebugInfo debug_info = 2;
+  // Map of metric names to lists of metric values and optional partition.
+  map<string, MetricValueList> metrics_list = 4;
+
+  reserved 3;
+}
+
+// Metric value of the metric we want to log
+message MetricValue {
+  // Value of the metric.
+  oneof value_type{
+    int32 value_int32 = 1;
+    double value_double = 3;
+  }
+  // Partition specifies a subgroup for the metric to facilitate segmented analysis.
+  string partition = 2;
+}
+
+message MetricValueList {
+  // A list of metric values.
+  repeated MetricValue metrics = 1;
+}
+
+message ModelSpec {
+  // Required servable model path; e.g. "my_bucket/models/pcvr_models/1".
+  string model_path = 1;
+}
+
+// RegisterModelRequest specifies a model to register.
+message RegisterModelRequest {
+  // Model Specification.
+  ModelSpec model_spec = 1;
+  // Raw payload of a ML model.
+  // This represents a list of file path and content pairs.
+  map<string, bytes> model_files = 2;
+  // Batch inference requests used to perform warm up for target model during model
+  // registration, schema should follow BatchInferenceRequest in inference_payload.proto
+  // request text should be in json format.
+  string warm_up_batch_request_json = 3;
+}
+
+message RegisterModelResponse {
+  // Map of metric names to lists of metric values and optional partition.
+  map<string, MetricValueList> metrics_list = 1;
+
+}
+
+message DeleteModelRequest {
+  ModelSpec model_spec = 1;
+}
+
+message DeleteModelResponse {
+}
+
+message GetModelPathsRequest {
+}
+
+message GetModelPathsResponse {
+  repeated ModelSpec model_specs = 1;
+}
+
+message InferenceSidecarRuntimeConfig {
+  // The following two parameters control the threading behavior of the
+  // inference backend.
+  // For Tensorflow, they are configured at the session level.
+  // For PyTorch, they are configured the process level.
+
+  // Specifies the number of threads for parallelizing individual operations.
+  int32 num_interop_threads = 1;
+  // Specifies the number of threads for parallelizing the execution within a
+  // single operation.
+  int32 num_intraop_threads = 2;
+
+  // Specifies the inference backend module required.
+  // Currently supports "test", "tensorflow_v2_14_0", "pytorch_v2_1_1"
+  string module_name = 3;
+
+  // Specifies a list of CPU IDs to set the CPU affinity for the sidecar.
+  // The sidecar process will run only on the specified CPUs.
+  // If `cpuset` is empty, the CPU affinity is not used.
+  repeated int32 cpuset = 4;
+
+  // Internal use only. Please note that it is outside the scope of Adtech's control.
+  //
+  // Represents the probability of resetting ML models in the inference sidecar.
+  // It's the privacy preserving feature to prevent data leak between users.
+  // Range: 0.0 (never reset) to 1.0 (always reset per inference); and
+  // 0.5 means the reset probability of 50%. Applied to each model independently.
+  //
+  // TODO(b/330362159): Support different reset probability for consented
+  // traffic.
+  // TODO(b/348985774): Remove this field.
+  double model_reset_probability = 5;
+
+  // TCMalloc Flags.
+  //
+  // The TCMalloc release rate from the page heap. Uses the default if the value is 0.
+  int64 tcmalloc_release_bytes_per_sec = 6;
+  // The TCMalloc maximum thread cache size. Uses the default if the value is 0.
+  int64 tcmalloc_max_total_thread_cache_bytes = 7;
+  // The TCMalloc maximum cache size per CPU cache. Uses the default if the value is 0.
+  int32 tcmalloc_max_per_cpu_cache_bytes = 8;
+}
+
+// Proto to store consented debugging logs. It's passed back with
+// PredictResponse to the caller of the Predict RPC.
+message InferenceDebugInfo {
+  repeated string logs = 1;
+}
+
+// Proto to store metric when construct model.
+message ModelConstructMetrics {
+  // E2E Latency for pre warm process.
+  double model_pre_warm_latency = 1;
+}

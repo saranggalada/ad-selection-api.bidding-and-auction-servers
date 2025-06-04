@@ -1,0 +1,88 @@
+# Portions Copyright (c) Microsoft Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: otel-collector
+  labels:
+    app: otel-collector
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: otel-collector
+  template:
+    metadata:
+      labels:
+        app: otel-collector
+    spec:
+      containers:
+      # OpenTelemetry Collector sidecar container
+      - name: otel-collector
+        image: otel/opentelemetry-collector-contrib:0.114.0
+        args: ["--config=/etc/otel/otel-config.yaml"]
+
+        env:
+          - name: INSTRUMENTATION_KEY
+            valueFrom:
+              secretKeyRef:
+                name: instrumentation-key-secret
+                key: instrumentation_key
+          - name: APPLICATIONINSIGHTS_CONNECTION_STRING
+            valueFrom:
+              secretKeyRef:
+                name: instrumentation-key-secret
+                key: applicationinsights_connection_string
+          - name: MY_POD_IP
+            valueFrom:
+              fieldRef:
+                fieldPath: status.podIP
+        ports:
+          - containerPort: 4316
+            hostPort: 4316
+            name: otlp-health
+          - containerPort: 4317
+            hostPort: 4317
+            protocol: TCP
+            name: otlp-grpc
+          - containerPort: 4318
+            hostPort: 4318
+            protocol: TCP
+            name: otlp-http
+
+        livenessProbe:
+          httpGet:
+            path: /
+            port: otlp-health
+          initialDelaySeconds: 10
+          periodSeconds: 30
+          timeoutSeconds: 10
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /
+            port: otlp-health
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 10
+          failureThreshold: 3
+
+        volumeMounts:
+          - name: otel-config-volume
+            mountPath: /etc/otel/otel-config.yaml
+            subPath: otel-collector-config.yaml
+      volumes:
+        - name: otel-config-volume
+          configMap:
+            name: otel-collector-config

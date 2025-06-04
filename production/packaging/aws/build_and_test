@@ -1,0 +1,210 @@
+#!/bin/bash
+# Copyright 2022 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+set -o pipefail
+set -o errexit
+export TZ=Etc/UTC
+export PS4='+\tZ $(basename ${BASH_SOURCE[0]}):${LINENO} ' # xtrace prompt
+
+START=$(date +%s)
+
+trap _print_runtime EXIT
+function _print_runtime() {
+  local -r -i STATUS=$?
+  local -i END
+  END=$(date +%s)
+  /usr/bin/env LC_ALL=en_US.UTF-8 printf "\naws/build_and_test runtime: %'ds\n" $((END - START)) >/dev/stderr
+  # shellcheck disable=SC2086
+  exit ${STATUS}
+}
+
+function usage() {
+  local exitval=${1-1}
+  cat >&2 << USAGE
+usage:
+  $0 <options>
+    --without-shared-cache       Containers will not mount ${HOME}/.cache/bazel
+    --service                   [REQUIRED] At least one of: auction_service, bidding_service, buyer_frontend_service, seller_frontend_service. Use multiple times to specify more than one service.
+    --with-ami                   AMI region in which to build and store AWS AMIs. Use multiple times to specify more than one region
+    --aws-image-tag              Custom image tag for AMI image. Applied to AMI as tag value for key 'build_env'.
+
+environment variables (all optional):
+    WORKSPACE                    Set the path to the workspace (repo root)
+    BAZEL_STARTUP_ARGS           Additional startup arguments to pass to bazel invocations
+    BAZEL_EXTRA_ARGS             Additional command arguments to pass to bazel invocations
+    CBUILD_ARGS                  Additional command-line arguments to cbuild
+USAGE
+  # shellcheck disable=SC2086
+  exit ${exitval}
+}
+
+declare -a AMI_REGIONS
+declare BUILD_FLAVOR=prod
+declare AWS_IMAGE_TAG=""
+declare SERVICE_LIST=()
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --service)
+      SERVICE_LIST+=("$2")
+      shift 2 || usage
+      ;;
+    --with-ami)
+      AMI_REGIONS+=("$2")
+      shift 2 || usage
+      ;;
+    --aws-image-tag)
+      AWS_IMAGE_TAG="$2"
+      shift 2 || usage
+      ;;
+    --verbose)
+      set -o xtrace
+      shift
+      ;;
+    --build-flavor)
+      BUILD_FLAVOR="$2"
+      shift 2 || usage
+      ;;
+    -h | --help)
+      usage 0
+      break
+      ;;
+    *)
+      usage
+      break
+      ;;
+  esac
+done
+
+function arr_to_string_list() {
+  declare -r -n arr=$1
+  printf -v joined '"%s",' "${arr[@]}"
+  printf "[%s]" "${joined%,}"
+}
+
+SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
+# shellcheck source=builders/tools/builder.sh
+source "${SCRIPT_DIR}"/../../../builders/tools/builder.sh
+DIST="${WORKSPACE}"/dist
+
+mkdir -p "${DIST}"/aws
+chmod 770 "${DIST}" "${DIST}"/aws
+
+printf "==== build AWS artifacts using build-amazonlinux2023 =====\n"
+declare server_image=""
+declare image_uri=""
+declare image_tag=""
+for service in "${SERVICE_LIST[@]}"; do
+  server_image="dist/debian/${service}_image.tar"
+  if [[ ! -s ${WORKSPACE}/${server_image} ]]; then
+      printf "Error: docker image tar file not found: %s\n" "${server_image}" >&2
+      exit 1
+  fi
+
+  # build nitro enclave image, collect eif artifacts
+  image_uri="bazel/production/packaging/aws/${service}"
+  image_tag=$(mktemp --dry-run temp-XXXXXX)
+
+  builder::cbuild_al2023 $"
+  set -o errexit
+  # extract server docker image into local docker client and retag it
+  docker load -i ${server_image}
+  docker tag ${image_uri}:server_docker_image ${image_uri}:${image_tag}
+  nitro-cli build-enclave \
+    --docker-uri ${image_uri}:${image_tag} \
+    --output-file /tmp/${service}.eif \
+    > /tmp/${service}_${BUILD_FLAVOR}.json
+  if [[ $? -eq 0 ]]; then
+    mv /tmp/${service}.* dist/aws/
+    mv /tmp/${service}_${BUILD_FLAVOR}.* dist/aws/
+  fi
+  "
+  docker image rm "${image_uri}:${image_tag}"
+done
+
+builder::cbuild_al2023 $"
+trap _collect_logs EXIT
+function _collect_logs() {
+  local -r -i STATUS=\$?
+  printf 'Collecting bazel logs...\n' &>/dev/stderr
+  bazel ${BAZEL_STARTUP_ARGS} run ${BAZEL_EXTRA_ARGS} //:collect-logs
+  exit \${STATUS}
+}
+set -o errexit
+bazel ${BAZEL_STARTUP_ARGS} run ${BAZEL_EXTRA_ARGS} //production/packaging/aws/common/ami:copy_to_dist
+"
+
+builder::cbuild_debian $"
+trap _collect_logs EXIT
+function _collect_logs() {
+  local -r -i STATUS=\$?
+  printf 'Collecting bazel logs...\n' &>/dev/stderr
+  bazel ${BAZEL_STARTUP_ARGS} run ${BAZEL_EXTRA_ARGS} //:collect-logs
+  exit \${STATUS}
+}
+set -o errexit
+bazel ${BAZEL_STARTUP_ARGS} run ${BAZEL_EXTRA_ARGS} //production/packaging/aws/common/ami:copy_to_dist_proto
+"
+
+"${WORKSPACE}"/builders/tools/normalize-dist
+
+if [[ -n ${AMI_REGIONS[0]} ]]; then
+  if [[ -v KOKORO_ARTIFACTS_DIR ]]; then
+    sudo apt-get install -y unzip
+  fi
+  unzip -o -d "${DIST}"/aws "${DIST}"/aws/nonenclave_artifacts.zip
+  unzip -o -d "${DIST}"/aws "${DIST}"/aws/artifacts_proto.zip
+  printf "==== build AWS AMI (using packer) =====\n"
+  regions="$(arr_to_string_list AMI_REGIONS)"
+  build_version="$(git -C ${WORKSPACE} describe --tags --always || echo no-git-version)"
+
+  packer_pids=()
+
+  for service in "${SERVICE_LIST[@]}"; do
+      log_file="${WORKSPACE}/dist/${service}_aws_build_log.txt"
+      (builder::cbuild_al2023 "
+      set -o errexit
+      packer build \
+        -var=regions='${regions}' \
+        -var=service=${service} \
+        -var=git_commit=$(git rev-parse HEAD) \
+        -var=build_flavor=${BUILD_FLAVOR} \
+        -var=build_version=${build_version} \
+        -var=build_env=${AWS_IMAGE_TAG} \
+        -var=distribution_dir=dist/aws \
+        -var=workspace=/src/workspace \
+        production/packaging/aws/common/ami/image.pkr.hcl
+      " 2>&1 >> "$log_file") &
+      packer_pids+=($!)  # Store the packer build process ID
+  done
+
+  failed=0
+  i=0
+  for pid in "${packer_pids[@]}"; do
+    wait "${pid}" || {
+      built_service="${SERVICE_LIST[${i}]}"
+      service_build_logs="${WORKSPACE}/dist/${built_service}_aws_build_log.txt"
+      echo "----- Log output for $built_service -----" >&2
+      cat "${service_build_logs}" >&2
+      echo "Error: packer build failed for process ${pid} (service: ${built_service})." >&2
+      failed=1
+    }
+    i=$((i+1))
+  done
+
+  if [[ $failed -eq 1 ]]; then
+    exit 1
+  fi
+fi
