@@ -1,2 +1,0 @@
-load SortList /tools_test/sort_list_10k_udf
-SortList /tools_test/empty.json
