@@ -127,4 +127,3 @@ test:all-tests --test_summary=detailed
 try-import %workspace%/production/packaging/.bazelrc
 try-import %workspace%/builders/.coverage.bazelrc
 coverage --test_tag_filters=-flaky
-build --override_repository=google_privacysandbox_servers_common=third_party/google_privacysandbox_servers_common_202af696/
