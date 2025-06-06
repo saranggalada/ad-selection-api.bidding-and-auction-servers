@@ -70,4 +70,3 @@ build:tsan --linkopt=-fsanitize=thread
 # This is needed to address false positive problem with abseil.
 # https://github.com/google/sanitizers/issues/953
 build:tsan --test_env=TSAN_OPTIONS=report_atomic_races=0
-build --override_repository=google_privacysandbox_servers_common=third_party/google_privacysandbox_servers_common_a7515f84/

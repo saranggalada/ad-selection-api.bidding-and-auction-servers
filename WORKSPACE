@@ -1,6 +1,4 @@
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
-
-
 load("//builders/bazel:deps.bzl", "python_deps", "python_register_toolchains")
 
 http_archive(
@@ -13,28 +11,20 @@ python_deps()
 
 python_register_toolchains("//builders/bazel")
 
-
-
-
-
 http_archive(
     name = "google_privacysandbox_servers_common",
     auth_patterns = {
-
     },
-
     patch_args = ["-p1"],
     patches = [
         "//third_party:data-plane-azure-kms-client-provider-utils.patch",
         "//third_party:data-plane-azure-kms-fixes.patch",
         "//third_party:data-plane-azure-dd8c778001.patch",
     ],
-    
     sha256 = "",
-    strip_prefix = "",
     type = "zip",
     urls = [
-        "https://overridden.example",
+        "file:///src/workspace/third_party/google_privacysandbox_servers_common_202af696.zip",
     ],
 )
 
@@ -92,15 +82,12 @@ http_archive(
 
 http_archive(
     name = "service_value_key_fledge_privacysandbox",
-    
     sha256 = "00f42bf01e150a2bbe2e345fa21dc6fc0685a7632cc475937846fa0f643736e5",
     strip_prefix = "protected-auction-key-value-service-1.1.0",
     urls = [
         "https://github.com/privacysandbox/protected-auction-key-value-service/archive/refs/tags/v1.1.0.zip",
     ],
 )
-
-
 
 http_archive(
     name = "pybind11_bazel",
@@ -115,19 +102,15 @@ python_configure(
     name = "local_config_python",
 )
 
-
 local_repository(
     name = "inference_common",
     path = "services/inference_sidecar/common",
 )
 
-
 local_repository(
     name = "pytorch_v2_1_1",
     path = "services/inference_sidecar/modules/pytorch_v2_1_1",
 )
-
-
 
 local_repository(
     name = "tensorflow_v2_14_0",
@@ -185,7 +168,6 @@ http_archive(
 load("@com_google_cpp_proto_builder//:workspace.bzl", "init_cpp_pb_external_repositories")
 
 init_cpp_pb_external_repositories()
-
 
 load("@google_privacysandbox_servers_common//build_defs/cc/shared:sandboxed_api.bzl", "sandboxed_api")
 

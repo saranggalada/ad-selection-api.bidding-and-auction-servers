@@ -1,20 +1,4 @@
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
-
-
 load("//third_party:pytorch_v2_1_1_deps1.bzl", "pytorch_v2_1_1_deps1")
 load("//third_party:pytorch_v2_1_1_deps2.bzl", "pytorch_v2_1_1_deps2")
 
@@ -22,24 +6,14 @@ pytorch_v2_1_1_deps1()
 
 pytorch_v2_1_1_deps2()
 
-
-
-
-
-
-
 http_archive(
     name = "google_privacysandbox_servers_common",
     auth_patterns = {
-
     },
-
-    
     sha256 = "",
-    strip_prefix = "",
     type = "zip",
     urls = [
-        "https://overridden.example",
+        "file:///src/workspace/third_party/google_privacysandbox_servers_common_a7515f84.zip",
     ],
 )
 
@@ -62,7 +36,6 @@ switched_rules_by_language(
     grpc = True,
 )
 
-
 local_repository(
     name = "inference_common",
     path = "../../common",
@@ -76,7 +49,6 @@ http_archive(
     url = "https://github.com/Tencent/rapidjson/archive/v1.1.0.tar.gz",
 )
 
-
 load("@com_github_grpc_grpc//bazel:grpc_deps.bzl", "grpc_deps")
 
 grpc_deps()
@@ -87,7 +59,6 @@ protobuf_deps()
 
 load("@google_privacysandbox_servers_common//build_defs/cc/shared:sandboxed_api.bzl", "sandboxed_api")
 
-
 sandboxed_api()
 
 load("@com_google_sandboxed_api//sandboxed_api/bazel:llvm_config.bzl", "llvm_disable_optional_support_deps")
@@ -96,7 +67,6 @@ load("@com_google_sandboxed_api//sandboxed_api/bazel:sapi_deps.bzl", "sapi_deps"
 llvm_disable_optional_support_deps()
 
 sapi_deps()
-
 
 load("//builders/bazel:deps.bzl", "python_deps")
 
