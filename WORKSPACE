@@ -21,10 +21,9 @@ http_archive(
         "//third_party:data-plane-azure-kms-fixes.patch",
         "//third_party:data-plane-azure-dd8c778001.patch",
     ],
-    sha256 = "",
-    type = "zip",
+    strip_prefix = "ad-selection-api.data-plane-shared-libraries-main",
     urls = [
-        "file:///src/workspace/third_party/google_privacysandbox_servers_common_202af696.zip",
+        "https://github.com/iSPIRT/ad-selection-api.data-plane-shared-libraries/archive/refs/heads/main.zip",
     ],
 )
 
