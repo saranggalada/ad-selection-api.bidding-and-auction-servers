@@ -427,7 +427,6 @@ inline constexpr std::array<std::string_view, kNumAuctionResultKeys>
         kUpdateGroups,                // 18
         kAdAuctionResultNonce,        // 19
         kDebugReports,                // 20
-        kMicrosoftIsKAnon             // 21
 };
 
 template <std::size_t Size>

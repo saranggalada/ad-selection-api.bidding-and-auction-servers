@@ -31,11 +31,9 @@ cc_library(
     name = "get_bids_unary_reactor",
     srcs = [
         "get_bids_unary_reactor.cc",
-        "microsoft_join_k_anon_reactor.cc",
     ],
     hdrs = [
         "get_bids_unary_reactor.h",
-        "microsoft_join_k_anon_reactor.h",
     ],
     deps = [
         ":kv_buyer_signals_adapter",
@@ -64,9 +62,6 @@ cc_library(
         "@com_google_absl//absl/functional:any_invocable",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/time",
-        # MSFT DEPS Start
-        "//services/common/clients/microsoft_k_anon_server:async_client",
-        # MSFT DEPS end
     ],
 )
 
@@ -101,7 +96,6 @@ cc_library(
         # MSFT DEPS Start
         "//api:microsoft_bidding_auction_servers_cc_grpc_proto",
         "//api:microsoft_bidding_auction_servers_cc_proto",
-        "//services/common/clients/microsoft_k_anon_server:async_client",
         # MSFT DEPS end
     ],
 )
