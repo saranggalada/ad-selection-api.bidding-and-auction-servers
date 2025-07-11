@@ -17,19 +17,17 @@ on:
         - development
         - staging
         - production
-        
+
 permissions:
   id-token: write
   contents: read
+  security-events: write
 
 jobs:
   analyze:
     name: Analyze
     runs-on: ubuntu-latest
-    permissions:
-      actions: read
-      contents: read
-      security-events: write
+    # Remove duplicate permissions since they're already defined at workflow level
 
     strategy:
       fail-fast: false
@@ -45,8 +43,8 @@ jobs:
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
 
-    - name: Log in with Azure
-      uses: azure/login@v1
+    - name: Log in with Azure (OIDC)
+      uses: azure/login@v2
       with:
         client-id: ${{ secrets.AZURE_CLIENT_ID }}
         tenant-id: ${{ secrets.AZURE_TENANT_ID }}
@@ -58,16 +56,13 @@ jobs:
         # Create .bazelrc.remote for remote caching
         cat >> .bazelrc.remote << EOF
         # Remote cache configuration for Azure Blob Storage
-        build --remote_cache=https://${{ secrets.AZURE_STORAGE_ACCOUNT }}.blob.core.windows.net/${{ secrets.AZURE_BAZEL_CACHE_CONTAINER }}
-        build --remote_upload_local_results=true
-        build --remote_accept_cached=true
-        build --remote_timeout=60
-        build --experimental_remote_cache_compression
+        build:remote --remote_cache=https://${{ secrets.AZURE_STORAGE_ACCOUNT }}.blob.core.windows.net/${{ secrets.AZURE_BAZEL_CACHE_CONTAINER }}
+        build:remote --remote_upload_local_results=true
+        build:remote --remote_accept_cached=true
+        build:remote --remote_timeout=60
+        build:remote --experimental_remote_cache_compression
+        build:remote --google_default_credentials
         EOF
-        
-        # Set Azure storage credentials as environment variables for Bazel
-        echo "AZURE_STORAGE_ACCOUNT=${{ secrets.AZURE_STORAGE_ACCOUNT }}" >> $GITHUB_ENV
-        echo "AZURE_STORAGE_KEY=${{ secrets.AZURE_STORAGE_KEY }}" >> $GITHUB_ENV
 
     - name: Build the code
       run: |
@@ -75,7 +70,7 @@ jobs:
         chmod +x ./production/packaging/build_and_test_all_in_docker
         
         # Use Bazel with remote cache configuration
-        export BAZEL_EXTRA_ARGS="--config_file=.bazelrc.remote"
+        export BAZEL_EXTRA_ARGS="--config=remote"
         
         ./production/packaging/build_and_test_all_in_docker \
           --service-path bidding_service \
