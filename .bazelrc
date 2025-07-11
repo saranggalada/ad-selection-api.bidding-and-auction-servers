@@ -37,7 +37,6 @@ build:clang --per_file_copt=api/udf/.*@-fconstexpr-steps=1271242
 build:clang --per_file_copt=external/(json_c|nitrokmscli_).*\.c@-Wno-implicit-function-declaration
 
 # Microsoft Builds - Defines for Ad Selection API
-build:clang --copt=-DMICROSOFT_AD_SELECTION_BUILD
 
 # Flag compiler warnings as errors.
 build:cpp_no_warn --copt=-Werror
