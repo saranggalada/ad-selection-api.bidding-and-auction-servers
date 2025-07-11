@@ -53,8 +53,9 @@ jobs:
     - name: Set up Bazel cache with Azure Blob Storage
       run: |
         echo "Setting up Bazel remote cache with Azure Blob Storage..."
-        # Create .bazelrc.remote for remote caching
-        cat >> .bazelrc.remote << EOF
+        # Append remote cache configuration to existing .bazelrc
+        cat >> .bazelrc << EOF
+        
         # Remote cache configuration for Azure Blob Storage
         build:remote --remote_cache=https://${{ secrets.AZURE_STORAGE_ACCOUNT }}.blob.core.windows.net/${{ secrets.AZURE_BAZEL_CACHE_CONTAINER }}
         build:remote --remote_upload_local_results=true
@@ -63,14 +64,21 @@ jobs:
         build:remote --experimental_remote_cache_compression
         build:remote --google_default_credentials
         EOF
+        
+        echo "Bazel remote cache configuration added to .bazelrc"
 
     - name: Build the code
       run: |
         echo "Building code with the specified parameters and Azure Blob cache..."
         chmod +x ./production/packaging/build_and_test_all_in_docker
         
+        # Show the bazel config for debugging
+        echo "Current .bazelrc content:"
+        cat .bazelrc | tail -10
+        
         # Use Bazel with remote cache configuration
         export BAZEL_EXTRA_ARGS="--config=remote"
+          echo "BAZEL_EXTRA_ARGS: $BAZEL_EXTRA_ARGS"
         
         ./production/packaging/build_and_test_all_in_docker \
           --service-path bidding_service \
