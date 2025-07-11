@@ -63,7 +63,6 @@ jobs:
         build:remote --remote_accept_cached=true
         build:remote --remote_timeout=60
         build:remote --experimental_remote_cache_compression
-        build:remote --google_default_credentials
         EOF
         
         echo "Bazel remote cache configuration added to .bazelrc"
@@ -76,10 +75,6 @@ jobs:
         # Show the bazel config for debugging
         echo "Current .bazelrc content:"
         cat .bazelrc | tail -10
-        
-        # Use Bazel with remote cache configuration
-        export BAZEL_EXTRA_ARGS="--config=remote"
-          echo "BAZEL_EXTRA_ARGS: $BAZEL_EXTRA_ARGS"
         
         ./production/packaging/build_and_test_all_in_docker \
           --service-path bidding_service \
