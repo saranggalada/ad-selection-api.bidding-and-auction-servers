@@ -45,68 +45,36 @@ jobs:
       with:
         ref: ${{ github.event.inputs.branch || github.ref }}
 
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
-
-    - name: Log in with Azure (OIDC)
-      uses: azure/login@v2
-      with:
-        client-id: ${{ secrets.AZURE_CLIENT_ID }}
-        tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-        subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-
-    - name: Set up Bazel cache with Azure Blob Storage
+    - name: Install C++ compiler for CodeQL
       run: |
-        echo "Setting up Bazel remote cache with Azure Blob Storage..."
-        # Append remote cache configuration to existing .bazelrc
-        cat >> .bazelrc << EOF
-        
-        # Remote cache configuration for Azure Blob Storage
-        build:remote --remote_cache=https://${{ secrets.AZURE_STORAGE_ACCOUNT }}.blob.core.windows.net/${{ secrets.AZURE_BAZEL_CACHE_CONTAINER }}
-        build:remote --remote_upload_local_results=true
-        build:remote --remote_accept_cached=true
-        build:remote --remote_timeout=60
-        build:remote --experimental_remote_cache_compression
-        EOF
-        
-        echo "Bazel remote cache configuration added to .bazelrc"
+        echo "Installing basic C++ compiler to satisfy CodeQL requirements..."
+        sudo apt-get update
+        sudo apt-get install -y build-essential g++ gcc
+        echo "C++ compiler installed:"
+        g++ --version
 
     - name: Initialize CodeQL
       uses: github/codeql-action/init@v3
       with:
         languages: ${{ matrix.language }}
         build-mode: ${{ matrix.build-mode }}
-        # If you wish to specify custom queries, you can do so here or in a config file.
-        # By default, queries listed here will override any specified in a config file.
-        # Prefix the list here with "+" to use these queries and those in the config file.
-        
-        # For more details on CodeQL's query packs, refer to: https://docs.github.com/en/code-security/code-scanning/automatically-scanning-your-code-for-vulnerabilities-and-errors/configuring-code-scanning#using-queries-in-ql-packs
-        # queries: security-extended,security-and-quality
+        # JavaScript source-only analysis
     # Build step is skipped when using build-mode: none for all languages
     # CodeQL will perform source-code-only analysis without compilation
     - name: Skip build step
       run: |
         echo "Skipping build step - using source-code-only analysis"
         echo "CodeQL will analyze source code without compilation information"
-        
-    - name: List generated artifacts
-      run: |
-        echo "Generated tar files for Docker loading:"
-        find . -name "*.tar" -type f | head -10
-        echo "Generated artifacts in dist/:"
-        ls -la dist/ 2>/dev/null || echo "No dist/ directory found"
 
-    - name: Extract and prepare source code for analysis
+    - name: Extract and prepare C++ source code for analysis
       if: matrix.language == 'cpp'
       run: |
         echo "Preparing C++ source code for CodeQL analysis..."
-        # CodeQL analyzes source code, not Docker images
-        # Ensure all relevant source directories are available
         echo "C++ source directories to be analyzed:"
         find services/ -name "*.cc" -o -name "*.cpp" -o -name "*.h" -o -name "*.hpp" | head -20
         echo "Total C++ files found:"
         find . -name "*.cc" -o -name "*.cpp" -o -name "*.h" -o -name "*.hpp" | wc -l
-
+        
     - name: Extract and prepare JavaScript/TypeScript for analysis  
       if: matrix.language == 'javascript'
       run: |
