@@ -43,22 +43,6 @@ jobs:
       with:
         languages: ${{ matrix.language }}
         build-mode: ${{ matrix.build-mode }}
-        # JavaScript source-only analysis
-    # Build step is skipped when using build-mode: none for all languages
-    # CodeQL will perform source-code-only analysis without compilation
-    - name: Skip build step
-      run: |
-        echo "Skipping build step - using source-code-only analysis"
-        echo "CodeQL will analyze source code without compilation information"
-
-    - name: Extract and prepare C++ source code for analysis
-      if: matrix.language == 'c-cpp'
-      run: |
-        echo "Preparing C++ source code for CodeQL analysis..."
-        echo "C++ source directories to be analyzed:"
-        find services/ -name "*.cc" -o -name "*.cpp" -o -name "*.h" -o -name "*.hpp" | head -20
-        echo "Total C++ files found:"
-        find . -name "*.cc" -o -name "*.cpp" -o -name "*.h" -o -name "*.hpp" | wc -l
         
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v3
