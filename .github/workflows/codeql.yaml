@@ -82,22 +82,12 @@ jobs:
         
         # For more details on CodeQL's query packs, refer to: https://docs.github.com/en/code-security/code-scanning/automatically-scanning-your-code-for-vulnerabilities-and-errors/configuring-code-scanning#using-queries-in-ql-packs
         # queries: security-extended,security-and-quality
-    - if: ${{ matrix.build-mode == 'manual' }}
-      name: Build the code
+    # Build step is skipped when using build-mode: none for all languages
+    # CodeQL will perform source-code-only analysis without compilation
+    - name: Skip build step
       run: |
-        echo "Building code with the specified parameters and Azure Blob cache..."
-        chmod +x ./production/packaging/build_and_test_all_in_docker
-        ./production/packaging/build_and_test_all_in_docker \
-          --service-path bidding_service \
-          --service-path buyer_frontend_service \
-          --no-precommit \
-          --no-tests \
-          --build-flavor non_prod \
-          --platform azure \
-          --instance local
-        # Show the bazel config for debugging
-        echo "Current .bazelrc content:"
-        cat .bazelrc | tail -10
+        echo "Skipping build step - using source-code-only analysis"
+        echo "CodeQL will analyze source code without compilation information"
         
     - name: List generated artifacts
       run: |
