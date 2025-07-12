@@ -18,11 +18,6 @@ on:
         - staging
         - production
 
-permissions:
-  id-token: write
-  contents: read
-  security-events: write
-
 jobs:
   analyze:
     name: Analyze
@@ -34,24 +29,14 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - language: 'cpp'
-            build-mode: 'none'
-          - language: 'javascript'
-            build-mode: 'none'
+          - language: c-cpp
+            build-mode: none
 
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
       with:
         ref: ${{ github.event.inputs.branch || github.ref }}
-
-    - name: Install C++ compiler for CodeQL
-      run: |
-        echo "Installing basic C++ compiler to satisfy CodeQL requirements..."
-        sudo apt-get update
-        sudo apt-get install -y build-essential g++ gcc
-        echo "C++ compiler installed:"
-        g++ --version
 
     - name: Initialize CodeQL
       uses: github/codeql-action/init@v3
@@ -75,15 +60,6 @@ jobs:
         echo "Total C++ files found:"
         find . -name "*.cc" -o -name "*.cpp" -o -name "*.h" -o -name "*.hpp" | wc -l
         
-    - name: Extract and prepare JavaScript/TypeScript for analysis  
-      if: matrix.language == 'javascript'
-      run: |
-        echo "Preparing JavaScript/TypeScript source code for CodeQL analysis..."
-        echo "JavaScript/TypeScript source directories to be analyzed:"
-        find . -name "*.js" -o -name "*.ts" -o -name "*.jsx" -o -name "*.tsx" | head -20
-        echo "Total JS/TS files found:"
-        find . -name "*.js" -o -name "*.ts" -o -name "*.jsx" -o -name "*.tsx" | wc -l
-
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v3
       with:
