@@ -139,6 +139,7 @@ jobs:
         path: ${{ runner.temp }}/codeql_databases
     
     - name: Cleanup build artifacts
+      if: always()
       run: |
         echo "Cleaning up build artifacts..."
         # Clean up any docker artifacts that might have permission issues
