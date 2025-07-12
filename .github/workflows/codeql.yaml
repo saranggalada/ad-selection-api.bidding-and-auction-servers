@@ -126,6 +126,18 @@ jobs:
         echo "Total JS/TS files found:"
         find . -name "*.js" -o -name "*.ts" -o -name "*.jsx" -o -name "*.tsx" | wc -l
 
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v3
+      with:
+        category: "/language:${{matrix.language}}"
+
+    - name: Upload CodeQL results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: codeql-results-${{ matrix.language }}
+        path: ${{ runner.temp }}/codeql_databases
+
     - name: Cleanup build artifacts
       run: |
         echo "Cleaning up build artifacts..."
@@ -143,15 +155,3 @@ jobs:
         
         # Clean up any temporary mounts
         sudo umount /tmp/* 2>/dev/null || true
-
-    - name: Perform CodeQL Analysis
-      uses: github/codeql-action/analyze@v3
-      with:
-        category: "/language:${{matrix.language}}"
-
-    - name: Upload CodeQL results
-      if: always()
-      uses: actions/upload-artifact@v4
-      with:
-        name: codeql-results-${{ matrix.language }}
-        path: ${{ runner.temp }}/codeql_databases
