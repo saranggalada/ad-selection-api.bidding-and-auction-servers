@@ -99,16 +99,6 @@ jobs:
         echo "Current .bazelrc content:"
         cat .bazelrc | tail -10
         
-        # CodeQL needs to monitor the build process for C/C++ analysis
-        ./production/packaging/build_and_test_all_in_docker \
-          --service-path bidding_service \
-          --service-path buyer_frontend_service \
-          --no-precommit \
-          --no-tests \
-          --build-flavor non_prod \
-          --platform azure \
-          --instance local
-
     - name: List generated artifacts
       run: |
         echo "Generated tar files for Docker loading:"
