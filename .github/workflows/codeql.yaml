@@ -71,6 +71,25 @@ jobs:
         
         echo "Bazel remote cache configuration added to .bazelrc"
 
+    - name: Pre-build cleanup
+      run: |
+        echo "Cleaning up any existing containers and build artifacts..."
+        # Remove any stale containers
+        docker container prune -f || true
+        docker volume prune -f || true
+        
+        # Clean up any problematic nested bidding-and-auction-servers directories
+        echo "Cleaning up nested bidding-and-auction-servers directories..."
+        sudo rm -rf /home/azureuser/actions-runner/bidding-and-auction-servers/ || true
+        sudo rm -rf ./bidding-and-auction-servers/ || true
+        sudo rm -rf ../bidding-and-auction-servers/ || true
+        
+        # Ensure we have proper permissions on current workspace
+        sudo chown -R $(whoami):$(whoami) . || true
+        
+        # Clean any potential mount issues
+        sudo umount /tmp/* 2>/dev/null || true
+
     - name: Initialize CodeQL
       uses: github/codeql-action/init@v3
       with:
@@ -129,7 +148,20 @@ jobs:
     - name: Cleanup build artifacts
       run: |
         echo "Cleaning up build artifacts..."
-        # Add commands to clean up any build artifacts if necessary
+        # Clean up any docker artifacts that might have permission issues
+        docker container prune -f || true
+        
+        # Clean up any problematic nested bidding-and-auction-servers directories created during build
+        echo "Cleaning up any nested bidding-and-auction-servers directories created during build..."
+        sudo rm -rf /home/azureuser/actions-runner/bidding-and-auction-servers/ || true
+        sudo rm -rf ./bidding-and-auction-servers/ || true
+        sudo rm -rf ../bidding-and-auction-servers/ || true
+        
+        # Fix permissions on any files created by docker
+        sudo chown -R $(whoami):$(whoami) . || true
+        
+        # Clean up any temporary mounts
+        sudo umount /tmp/* 2>/dev/null || true
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v3
