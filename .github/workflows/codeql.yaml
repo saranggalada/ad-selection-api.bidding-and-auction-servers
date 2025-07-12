@@ -52,7 +52,7 @@ jobs:
         echo "CodeQL will analyze source code without compilation information"
 
     - name: Extract and prepare C++ source code for analysis
-      if: matrix.language == 'cpp'
+      if: matrix.language == 'c-cpp'
       run: |
         echo "Preparing C++ source code for CodeQL analysis..."
         echo "C++ source directories to be analyzed:"
