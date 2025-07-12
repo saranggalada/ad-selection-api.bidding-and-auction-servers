@@ -35,7 +35,7 @@ jobs:
       matrix:
         include:
           - language: 'cpp'
-            build-mode: 'manual'
+            build-mode: 'none'
           - language: 'javascript'
             build-mode: 'none'
 
