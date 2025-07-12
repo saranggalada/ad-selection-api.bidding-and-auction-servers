@@ -86,7 +86,29 @@ jobs:
       name: Build the code
       run: |
         echo "Building code with the specified parameters and Azure Blob cache..."
+        echo "Current directory: $(pwd)"
+        echo "Workspace: ${GITHUB_WORKSPACE}"
+        
+        # Ensure we're in the correct workspace directory
+        cd "${GITHUB_WORKSPACE}"
+        
+        # Make the script executable
         chmod +x ./production/packaging/build_and_test_all_in_docker
+        
+        # Show the bazel config for debugging
+        echo "Current .bazelrc content:"
+        cat .bazelrc | tail -10
+        
+        # Set explicit environment variables to control container behavior and prevent breakout
+        export WORKSPACE="${GITHUB_WORKSPACE}"
+        export WORKSPACE_MOUNT="${GITHUB_WORKSPACE}"
+        export DOCKER_BUILDKIT=1
+        
+        # Ensure no conflicting containers exist
+        docker stop $(docker ps -aq --filter "name=cbuild-*") 2>/dev/null || true
+        docker rm $(docker ps -aq --filter "name=cbuild-*") 2>/dev/null || true
+        
+        # Run the build with explicit workspace context
         ./production/packaging/build_and_test_all_in_docker \
           --service-path bidding_service \
           --service-path buyer_frontend_service \
@@ -146,13 +168,15 @@ jobs:
         docker container prune -f || true
         
         # Clean up any problematic nested bidding-and-auction-servers directories created during build
-        echo "Cleaning up any nested bidding-and-auction-servers directories created during build..."
-        sudo rm -rf /home/azureuser/actions-runner/bidding-and-auction-servers/ || true
-        sudo rm -rf ./bidding-and-auction-servers/ || true
-        sudo rm -rf ../bidding-and-auction-servers/ || true
+        #echo "Cleaning up any nested bidding-and-auction-servers directories created during build..."
+        #sudo rm -rf /home/azureuser/actions-runner/bidding-and-auction-servers/ || true
+        #sudo rm -rf ./bidding-and-auction-servers/ || true
+        #sudo rm -rf ../bidding-and-auction-servers/ || true
         
-        # Fix permissions on any files created by docker
-        sudo chown -R $(whoami):$(whoami) . || true
+        # Fix permissions on workspace files (preserve content)
+        sudo chown -R $(whoami):$(whoami) ${GITHUB_WORKSPACE} || true
+        
+        echo "Cleanup completed for ${{ matrix.language }}"
         
         # Clean up any temporary mounts
         sudo umount /tmp/* 2>/dev/null || true
