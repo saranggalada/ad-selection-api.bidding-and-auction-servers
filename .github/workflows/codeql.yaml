@@ -33,7 +33,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        language: [ 'cpp', 'javascript' ]
+        include:
+          - language: 'cpp'
+            build-mode: 'manual'
+          - language: 'javascript'
+            build-mode: 'none'
 
     steps:
     - name: Checkout repository
@@ -67,15 +71,35 @@ jobs:
         
         echo "Bazel remote cache configuration added to .bazelrc"
 
-    - name: Build the code
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@v3
+      with:
+        languages: ${{ matrix.language }}
+        build-mode: ${{ matrix.build-mode }}
+        # If you wish to specify custom queries, you can do so here or in a config file.
+        # By default, queries listed here will override any specified in a config file.
+        # Prefix the list here with "+" to use these queries and those in the config file.
+        
+        # For more details on CodeQL's query packs, refer to: https://docs.github.com/en/code-security/code-scanning/automatically-scanning-your-code-for-vulnerabilities-and-errors/configuring-code-scanning#using-queries-in-ql-packs
+        # queries: security-extended,security-and-quality
+    - if: ${{ matrix.build-mode == 'manual' }}
+      name: Build the code
       run: |
         echo "Building code with the specified parameters and Azure Blob cache..."
         chmod +x ./production/packaging/build_and_test_all_in_docker
-        
+        ./production/packaging/build_and_test_all_in_docker \
+          --service-path bidding_service \
+          --service-path buyer_frontend_service \
+          --no-precommit \
+          --no-tests \
+          --build-flavor non_prod \
+          --platform azure \
+          --instance local
         # Show the bazel config for debugging
         echo "Current .bazelrc content:"
         cat .bazelrc | tail -10
         
+        # CodeQL needs to monitor the build process for C/C++ analysis
         ./production/packaging/build_and_test_all_in_docker \
           --service-path bidding_service \
           --service-path buyer_frontend_service \
@@ -85,33 +109,37 @@ jobs:
           --platform azure \
           --instance local
 
-    - name: Initialize CodeQL
-      uses: github/codeql-action/init@v3
-      with:
-        languages: ${{ matrix.language }}
-        # If you wish to specify custom queries, you can do so here or in a config file.
-        # By default, queries listed here will override any specified in a config file.
-        # Prefix the list here with "+" to use these queries and those in the config file.
-        
-        # For more details on CodeQL's query packs, refer to: https://docs.github.com/en/code-security/code-scanning/automatically-scanning-your-code-for-vulnerabilities-and-errors/configuring-code-scanning#using-queries-in-ql-packs
-        # queries: security-extended,security-and-quality
+    - name: List generated artifacts
+      run: |
+        echo "Generated tar files for Docker loading:"
+        find . -name "*.tar" -type f | head -10
+        echo "Generated artifacts in dist/:"
+        ls -la dist/ 2>/dev/null || echo "No dist/ directory found"
 
-    # Autobuild attempts to build any compiled languages (C/C++, C#, Go, Java, or Swift).
-    # If this step fails, then you should remove it and run the build manually (see below)
-    - name: Autobuild
-      uses: github/codeql-action/autobuild@v3
-      # Skip autobuild since we're building manually above
-      if: false
+    - name: Extract and prepare source code for analysis
+      if: matrix.language == 'cpp'
+      run: |
+        echo "Preparing C++ source code for CodeQL analysis..."
+        # CodeQL analyzes source code, not Docker images
+        # Ensure all relevant source directories are available
+        echo "C++ source directories to be analyzed:"
+        find services/ -name "*.cc" -o -name "*.cpp" -o -name "*.h" -o -name "*.hpp" | head -20
+        echo "Total C++ files found:"
+        find . -name "*.cc" -o -name "*.cpp" -o -name "*.h" -o -name "*.hpp" | wc -l
 
-    # ℹ️ Command-line programs to run using the OS shell.
-    # 📚 See https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idstepsrun
+    - name: Extract and prepare JavaScript/TypeScript for analysis  
+      if: matrix.language == 'javascript'
+      run: |
+        echo "Preparing JavaScript/TypeScript source code for CodeQL analysis..."
+        echo "JavaScript/TypeScript source directories to be analyzed:"
+        find . -name "*.js" -o -name "*.ts" -o -name "*.jsx" -o -name "*.tsx" | head -20
+        echo "Total JS/TS files found:"
+        find . -name "*.js" -o -name "*.ts" -o -name "*.jsx" -o -name "*.tsx" | wc -l
 
-    # If the Autobuild fails above, remove it and uncomment the following three lines.
-    # modify them (or add more) to build your code if your project, please refer to the EXAMPLE below for guidance.
-
-    # - run: |
-    #     echo "Run, Build Application using script"
-    #     ./location_of_script_within_repo/buildscript.sh
+    - name: Cleanup build artifacts
+      run: |
+        echo "Cleaning up build artifacts..."
+        # Add commands to clean up any build artifacts if necessary
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v3
