@@ -155,17 +155,10 @@ jobs:
 
     - name: Upload CodeQL SARIF results
       if: always()
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v4.6.2
       with:
         name: codeql-sarif-${{ matrix.language }}
         path: ${{ runner.temp }}/codeql_databases/*/results/*.sarif
-
-    - name: Upload complete CodeQL databases
-      if: always()
-      uses: actions/upload-artifact@v4
-      with:
-        name: codeql-databases-${{ matrix.language }}
-        path: ${{ runner.temp }}/codeql_databases
     
     - name: Cleanup build artifacts
       if: always()
