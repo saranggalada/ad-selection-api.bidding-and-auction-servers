@@ -54,7 +54,7 @@ jobs:
       - name: Run Trivy vulnerability scanner for buyer frontend service
         uses: aquasecurity/trivy-action@7b7aa264d83dc58691451798b4d117d53d21edfe
         with:
-          image-ref: 'ispirt.azurecr.io/depa-inferening/azure/buyer_frontend_service:nonprod-4.3.0.0'
+          image-ref: 'ispirt.azurecr.io/depa-inferencing/azure/buyer-frontend-service:nonprod-4.3.0.0'
           format: 'template'
           template: '@/contrib/sarif.tpl'
           output: 'trivy-results.sarif'
