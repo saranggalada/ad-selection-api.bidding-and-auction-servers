@@ -89,12 +89,82 @@ jobs:
         with:
           ref: ${{ github.event.inputs.branch || github.ref }}
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in with Azure (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
       - name: Log in to Azure Container Registry
         uses: azure/docker-login@v1
         with:
           login-server: ispirt.azurecr.io
           username: ${{ secrets.AZURE_REGISTRY_USERNAME }}
           password: ${{ secrets.AZURE_REGISTRY_PASSWORD }}
+
+      - name: Set up Bazel cache with Azure Blob Storage
+        run: |
+          echo "Setting up Bazel remote cache with Azure Blob Storage..."
+          # Append remote cache configuration to existing .bazelrc
+          cat >> .bazelrc << EOF
+          
+          # Remote cache configuration for Azure Blob Storage
+          build:remote --remote_cache=https://${{ secrets.AZURE_STORAGE_ACCOUNT }}.blob.core.windows.net/${{ secrets.AZURE_BAZEL_CACHE_CONTAINER }}
+          build:remote --remote_upload_local_results=true
+          build:remote --remote_accept_cached=true
+          build:remote --remote_timeout=60
+          build:remote --experimental_remote_cache_compression
+          EOF
+          
+          echo "Bazel remote cache configuration added to .bazelrc"
+
+      - name: Build the code
+        run: |
+          echo "Building code with the specified parameters and Azure Blob cache..."
+          echo "Current directory: $(pwd)"
+          echo "Workspace: ${GITHUB_WORKSPACE}"
+          
+          # Ensure we're in the correct workspace directory
+          cd "${GITHUB_WORKSPACE}"
+          
+          # Make the script executable
+          chmod +x ./production/packaging/build_and_test_all_in_docker
+          
+          # Show the bazel config for debugging
+          echo "Current .bazelrc content:"
+          cat .bazelrc | tail -10
+          
+          # Set explicit environment variables to control container behavior and prevent breakout
+          export WORKSPACE="${GITHUB_WORKSPACE}"
+          export WORKSPACE_MOUNT="${GITHUB_WORKSPACE}"
+          export DOCKER_BUILDKIT=1
+          
+          # Ensure no conflicting containers exist
+          docker stop $(docker ps -aq --filter "name=cbuild-*") 2>/dev/null || true
+          docker rm $(docker ps -aq --filter "name=cbuild-*") 2>/dev/null || true
+          
+          # Run the build with explicit workspace context
+          ./production/packaging/build_and_test_all_in_docker \
+            --service-path bidding_service \
+            --service-path buyer_frontend_service \
+            --no-precommit \
+            --no-tests \
+            --build-flavor non_prod \
+            --platform azure \
+            --instance local
+
+      - name: List generated artifacts
+        run: |
+          echo "Generated tar files for Docker loading:"
+          find . -name "*.tar" -type f | head -10
+          echo "Generated artifacts in dist/:"
+          ls -la dist/ 2>/dev/null || echo "No dist/ directory found"
+          echo "Generated artifacts in dist/azure/:"
+          ls -la dist/azure/ 2>/dev/null || echo "No dist/azure/ directory found"
 
       - name: Check for Docker tar files in dist/azure
         id: check_files
