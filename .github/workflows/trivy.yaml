@@ -410,3 +410,20 @@ jobs:
         with:
           name: docker-security-report
           path: security_report.md
+
+      - name: Cleanup build artifacts
+        if: always()
+        run: |
+          echo "Cleaning up build artifacts..."
+          # Clean up any docker artifacts that might have permission issues
+          docker container prune -f || true
+          
+          # Fix permissions on workspace files, subsequent runs fail,
+          # because of some files with root permissions
+          sudo chown -R $(whoami):$(whoami) ${GITHUB_WORKSPACE} || true
+          
+          echo "Cleanup completed for ${{ matrix.language }}"
+          
+          # Clean up any temporary mounts
+          sudo umount /tmp/* 2>/dev/null || true
+      
