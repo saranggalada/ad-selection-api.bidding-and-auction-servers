@@ -251,7 +251,7 @@ jobs:
             if [ -z "$tar_file" ]; then continue; fi
             
             SERVICE_NAME=$(basename "$tar_file" .tar | sed 's/_image$//')
-            REGISTRY_TAG="ispirt.azurecr.io/depa-inferencing/azure/${SERVICE_NAME}:${{ github.event.inputs.build_flavor || 'nonprod' }}-${{ github.event.inputs.image_tag || '4.3.0.0' }}"
+            REGISTRY_TAG="ispirt.azurecr.io/depa-inferencing/azure/test/${SERVICE_NAME}:${{ github.event.inputs.build_flavor || 'nonprod' }}-${{ github.event.inputs.image_tag || '4.3.0.0' }}"
             
             echo "🚀 Pushing: $REGISTRY_TAG"
             if docker push "$REGISTRY_TAG"; then
