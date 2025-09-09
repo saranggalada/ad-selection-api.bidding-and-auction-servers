@@ -1,0 +1,189 @@
+name: "CodeQL Analysis"
+
+on:
+  # Manual trigger only from any branch/environment
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch to run analysis on'
+        required: false
+        default: 'main'
+      environment:
+        description: 'Environment to run in'
+        required: false
+        default: 'development'
+        type: choice
+        options:
+        - development
+        - staging
+        - production
+
+permissions:
+  id-token: write
+  contents: read
+  security-events: write
+
+jobs:
+  analyze:
+    name: Analyze
+    runs-on: [self-hosted, linux, X64]
+
+    # Remove duplicate permissions since they're already defined at workflow level
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - language: 'cpp'
+            build-mode: 'manual'
+          - language: 'javascript'
+            build-mode: 'none'
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ github.event.inputs.branch || github.ref }}
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Log in with Azure (OIDC)
+      uses: azure/login@v2
+      with:
+        client-id: ${{ secrets.AZURE_CLIENT_ID }}
+        tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+        subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+    - name: Set up Bazel cache with Azure Blob Storage
+      run: |
+        echo "Setting up Bazel remote cache with Azure Blob Storage..."
+        # Append remote cache configuration to existing .bazelrc
+        cat >> .bazelrc << EOF
+        
+        # Remote cache configuration for Azure Blob Storage
+        build:remote --remote_cache=https://${{ secrets.AZURE_STORAGE_ACCOUNT }}.blob.core.windows.net/${{ secrets.AZURE_BAZEL_CACHE_CONTAINER }}
+        build:remote --remote_upload_local_results=true
+        build:remote --remote_accept_cached=true
+        build:remote --remote_timeout=60
+        build:remote --experimental_remote_cache_compression
+        EOF
+        
+        echo "Bazel remote cache configuration added to .bazelrc"
+
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@v3
+      with:
+        languages: ${{ matrix.language }}
+        build-mode: ${{ matrix.build-mode }}
+        # If you wish to specify custom queries, you can do so here or in a config file.
+        # By default, queries listed here will override any specified in a config file.
+        # Prefix the list here with "+" to use these queries and those in the config file.
+        
+        # For more details on CodeQL's query packs, refer to: https://docs.github.com/en/code-security/code-scanning/automatically-scanning-your-code-for-vulnerabilities-and-errors/configuring-code-scanning#using-queries-in-ql-packs
+        # queries: security-extended,security-and-quality
+    - if: ${{ matrix.build-mode == 'manual' }}
+      name: Build the code
+      run: |
+        echo "Building code with the specified parameters and Azure Blob cache..."
+        echo "Current directory: $(pwd)"
+        echo "Workspace: ${GITHUB_WORKSPACE}"
+        
+        # Ensure we're in the correct workspace directory
+        cd "${GITHUB_WORKSPACE}"
+        
+        # Make the script executable
+        chmod +x ./production/packaging/build_and_test_all_in_docker
+        
+        # Show the bazel config for debugging
+        echo "Current .bazelrc content:"
+        cat .bazelrc | tail -10
+        
+        # Set explicit environment variables to control container behavior and prevent breakout
+        export WORKSPACE="${GITHUB_WORKSPACE}"
+        export WORKSPACE_MOUNT="${GITHUB_WORKSPACE}"
+        export DOCKER_BUILDKIT=1
+        
+        # Ensure no conflicting containers exist
+        docker stop $(docker ps -aq --filter "name=cbuild-*") 2>/dev/null || true
+        docker rm $(docker ps -aq --filter "name=cbuild-*") 2>/dev/null || true
+        
+        # Run the build with explicit workspace context
+        ./production/packaging/build_and_test_all_in_docker \
+          --service-path bidding_service \
+          --service-path buyer_frontend_service \
+          --no-precommit \
+          --no-tests \
+          --build-flavor non_prod \
+          --platform azure \
+          --instance local
+        # Show the bazel config for debugging
+        echo "Current .bazelrc content:"
+        cat .bazelrc | tail -10
+        
+    - name: List generated artifacts
+      run: |
+        echo "Generated tar files for Docker loading:"
+        find . -name "*.tar" -type f | head -10
+        echo "Generated artifacts in dist/:"
+        ls -la dist/ 2>/dev/null || echo "No dist/ directory found"
+
+    - name: Extract and prepare source code for analysis
+      if: matrix.language == 'cpp'
+      run: |
+        echo "Preparing C++ source code for CodeQL analysis..."
+        # CodeQL analyzes source code, not Docker images
+        # Ensure all relevant source directories are available
+        echo "C++ source directories to be analyzed:"
+        find services/ -name "*.cc" -o -name "*.cpp" -o -name "*.h" -o -name "*.hpp" | head -20
+        echo "Total C++ files found:"
+        find . -name "*.cc" -o -name "*.cpp" -o -name "*.h" -o -name "*.hpp" | wc -l
+
+    - name: Extract and prepare JavaScript/TypeScript for analysis  
+      if: matrix.language == 'javascript'
+      run: |
+        echo "Preparing JavaScript/TypeScript source code for CodeQL analysis..."
+        echo "JavaScript/TypeScript source directories to be analyzed:"
+        find . -name "*.js" -o -name "*.ts" -o -name "*.jsx" -o -name "*.tsx" | head -20
+        echo "Total JS/TS files found:"
+        find . -name "*.js" -o -name "*.ts" -o -name "*.jsx" -o -name "*.tsx" | wc -l
+
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v3
+      with:
+        category: "/language:${{matrix.language}}"
+        
+    #upload to the repository Actions tab.
+    - name: Upload CodeQL SARIF results
+      if: always()
+      uses: actions/upload-artifact@v4.6.2
+      with:
+        name: codeql-sarif-${{ matrix.language }}
+        path: ${{ runner.temp }}/codeql_databases/*/results/*.sarif
+    
+    # Upload the results to GitHub's code scanning dashboard.
+    - name: Upload to code-scanning
+      uses: github/codeql-action/upload-sarif@v3
+      with:
+        sarif_file: results.sarif
+    
+    - name: Cleanup build artifacts
+      if: always()
+      run: |
+        echo "Cleaning up build artifacts..."
+        # Clean up any docker artifacts that might have permission issues
+        docker container prune -f || true
+        
+        # Clean up any problematic nested bidding-and-auction-servers directories created during build
+        #echo "Cleaning up any nested bidding-and-auction-servers directories created during build..."
+        #sudo rm -rf /home/azureuser/actions-runner/bidding-and-auction-servers/ || true
+        #sudo rm -rf ./bidding-and-auction-servers/ || true
+        #sudo rm -rf ../bidding-and-auction-servers/ || true
+        
+        # Fix permissions on workspace files (preserve content)
+        sudo chown -R $(whoami):$(whoami) ${GITHUB_WORKSPACE} || true
+        
+        echo "Cleanup completed for ${{ matrix.language }}"
+        
+        # Clean up any temporary mounts
+        sudo umount /tmp/* 2>/dev/null || true

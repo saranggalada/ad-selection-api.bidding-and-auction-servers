@@ -1060,6 +1060,7 @@ void SelectAdReactor::FetchBid(
   }
 }
 
+#if defined(MICROSOFT_AD_SELECTION_BUILD)
 void SelectAdReactor::MicrosoftJoinWinnerKAnon(
     ScoreAdsResponse::AdScore winning_ad) {
   if (enable_cancellation_ && request_context_->IsCancelled()) {
@@ -1145,6 +1146,7 @@ void SelectAdReactor::MicrosoftJoinWinnerKAnon(
         execute_result.ToString());
   }
 }
+#endif  // defined(MICROSOFT_AD_SELECTION_BUILD)
 
 void SelectAdReactor::LogInitiatedRequestErrorMetrics(
     absl::string_view server_name, const absl::Status& status,
