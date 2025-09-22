@@ -1,34 +1,7 @@
-# Copyright 2023 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
-# Workflow for the OSSF Scorecards Action
-# https://github.com/ossf/scorecard-action#installation
-
+# Scorecard supply-chain security - fixed to normalize SARIF and only upload to code-scanning on default branch
 name: Scorecard supply-chain security
-# on:
-#   # For Branch-Protection check. Only the default branch is supported. See
-#   # https://github.com/ossf/scorecard/blob/main/docs/checks.md#branch-protection
-#   branch_protection_rule:
-#   # To guarantee Maintained check is occasionally updated. See
-#   # https://github.com/ossf/scorecard/blob/main/docs/checks.md#maintained
-#   schedule:
-#     - cron: '35 10 * * 4'
-#   push:
-#     branches:
-#     - main
+
 on:
-  # Manual trigger only from any branch/environment
   workflow_dispatch:
     inputs:
       branch:
@@ -45,7 +18,7 @@ on:
         - staging
         - production
 
-# Declare default permissions as read only.
+# Declare default permissions as read only, but allow security-events upload when needed
 permissions: read-all
 
 jobs:
@@ -53,51 +26,84 @@ jobs:
     name: Scorecard analysis
     runs-on: ubuntu-latest
     permissions:
-      # Needed to upload the results to code-scanning dashboard.
       security-events: write
-      # Needed to publish results and get a badge (see publish_results below).
       id-token: write
-      # Uncomment the permissions below if installing in a private repository.
-      # contents: read
-      # actions: read
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@93ea575cb5d8a053eaa0ac8fa3b40d7e05a33cc8 # v3.1.0
+      - name: Checkout code (requested branch)
+        uses: actions/checkout@v4
         with:
+          # checkout the branch specified by the workflow input (fallback to current ref)
+          ref: ${{ github.event.inputs.branch || github.ref }}
           persist-credentials: false
 
+      - name: Show checked out ref
+        run: |
+          echo "GITHUB_REF=${GITHUB_REF}"
+          echo "Requested branch (input): ${{ github.event.inputs.branch }}"
+
       - name: Run analysis
-        uses: ossf/scorecard-action@0864cf19026789058feabb7e87baa5f140aac736 # v2.3.1
+        uses: ossf/scorecard-action@0864cf19026789058feabb7e87baa5f140aac736
         with:
           results_file: results.sarif
           results_format: sarif
-          # (Optional) "write" PAT token. Uncomment the `repo_token` line below if:
-          # - you want to enable the Branch-Protection check on a *public* repository, or
-          # - you are installing Scorecard on a *private* repository
-          # To create the PAT, follow the steps in https://github.com/ossf/scorecard-action#authentication-with-pat.
-          # repo_token: ${{ secrets.SCORECARD_TOKEN }}
-
-          # Public repositories:
-          #   - Publish results to OpenSSF REST API for easy access by consumers
-          #   - Allows the repository to include the Scorecard badge.
-          #   - See https://github.com/ossf/scorecard-action#publishing-results.
-          # For private repositories:
-          #   - `publish_results` will always be set to `false`, regardless
-          #     of the value entered here.
           publish_results: true
 
-      # Upload the results as artifacts (optional). Commenting out will disable uploads of run results in SARIF
-      # format to the repository Actions tab.
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4.6.2 
+      # Always upload the raw SARIF as an artifact so you can download & inspect it for non-default branches
+      - name: Upload SARIF artifact
+        uses: actions/upload-artifact@v4
         with:
-          name: SARIF file
+          name: scorecard-results-sarif
           path: results.sarif
           retention-days: 5
 
-      # Upload the results to GitHub's code scanning dashboard.
+      # Normalize SARIF so that GitHub can map results and create alerts:
+      # - Replace invalid/empty URIs like "no file associated with this alert" with "NO_FILE"
+      # - Ensure message.text exists (fallback to message.markdown)
+      - name: Normalize SARIF for Code Scanning
+        id: normalize
+        run: |
+          echo "Sanitizing results.sarif for upload to code-scanning..."
+          if [ ! -f results.sarif ]; then
+            echo "No results.sarif found, skipping normalization"
+            exit 0
+          fi
+          # Use jq to:
+          #  - replace null / space-containing / 'no file' artifactLocation.uri with "NO_FILE"
+          #  - ensure message.text exists (fallback to message.markdown stripped of simple HTML)
+          jq '
+            # helper: sanitize artifactLocation.uri values
+            def sanitize_uri:
+              if . == null then "NO_FILE"
+              else
+                # if looks like "no file associated..." or contains spaces, use NO_FILE
+                (if (test("(?i)^no file") or test(" ") ) then "NO_FILE" else . end)
+              end;
+
+            (.runs[]?.results[]? | .locations[]?.physicalLocation?.artifactLocation?.uri) |= sanitize_uri
+            |
+            (.runs[]?.results[]?) |= (
+              if (.message.text == null) and (.message.markdown != null) then
+                .message.text = (.message.markdown | gsub("<[^>]+>";""))
+              else .
+              end
+            )
+          ' results.sarif > results.fixed.sarif
+
+          # keep a copy of the sanitized file for debugging
+          mv results.fixed.sarif results.sarif
+          echo "Sanitization complete — results.sarif updated."
+
+      # Upload to GitHub Code Scanning only when running on the repository default branch (usually main).
+      # This avoids GitHub UI/branch restrictions and ensures alerts are created for the default branch.
       - name: Upload to code-scanning
+        if: ${{ (github.event.inputs.branch == github.repository_default_branch) || (github.ref == format('refs/heads/{0}', github.repository_default_branch)) || (github.event.inputs.branch == 'main' && github.repository_default_branch == 'main') }}
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: results.sarif
+
+      - name: Print SARIF sample (debug)
+        if: always()
+        run: |
+          echo "---- sample of normalized SARIF results (first 200 lines) ----"
+          head -n 200 results.sarif || true
