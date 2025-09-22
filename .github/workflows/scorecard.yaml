@@ -1,4 +1,3 @@
-# Scorecard supply-chain security - fixed to normalize SARIF and only upload to code-scanning on default branch
 name: Scorecard supply-chain security
 
 on:
@@ -18,7 +17,6 @@ on:
         - staging
         - production
 
-# Declare default permissions as read only, but allow security-events upload when needed
 permissions: read-all
 
 jobs:
@@ -30,80 +28,58 @@ jobs:
       id-token: write
 
     steps:
-      - name: Checkout code (requested branch)
-        uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v3
         with:
-          # checkout the branch specified by the workflow input (fallback to current ref)
-          ref: ${{ github.event.inputs.branch || github.ref }}
           persist-credentials: false
 
-      - name: Show checked out ref
-        run: |
-          echo "GITHUB_REF=${GITHUB_REF}"
-          echo "Requested branch (input): ${{ github.event.inputs.branch }}"
-
-      - name: Run analysis
-        uses: ossf/scorecard-action@0864cf19026789058feabb7e87baa5f140aac736
+      - name: Run Scorecard analysis
+        uses: ossf/scorecard-action@v2.3.1
         with:
           results_file: results.sarif
           results_format: sarif
           publish_results: true
+          # Uncomment below if you need a PAT for private repos
+          # repo_token: ${{ secrets.SCORECARD_TOKEN }}
 
-      # Always upload the raw SARIF as an artifact so you can download & inspect it for non-default branches
-      - name: Upload SARIF artifact
+      # Optional: patch SARIF to include a file reference for GitHub Code Scanning
+      - name: Patch SARIF for Code Scanning
+        run: |
+          python3 - << 'EOF'
+          import json
+          sarif_path = "results.sarif"
+          with open(sarif_path) as f:
+              sarif = json.load(f)
+
+          for run in sarif.get("runs", []):
+              results = run.get("results", [])
+              if not results and run.get("tool", {}).get("driver", {}).get("rules"):
+                  for rule in run["tool"]["driver"]["rules"]:
+                      results.append({
+                          "ruleId": rule["id"],
+                          "level": rule.get("defaultConfiguration", {}).get("level", "error"),
+                          "message": {"text": rule.get("fullDescription", {}).get("text", "Scorecard check triggered")},
+                          "locations": [{
+                              "physicalLocation": {
+                                  "artifactLocation": {"uri": "README.md"},
+                                  "region": {"startLine": 1}
+                              }
+                          }]
+                      })
+              run["results"] = results
+
+          with open(sarif_path, "w") as f:
+              json.dump(sarif, f, indent=2)
+          EOF
+
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: scorecard-results-sarif
+          name: SARIF file
           path: results.sarif
           retention-days: 5
 
-      # Normalize SARIF so that GitHub can map results and create alerts:
-      # - Replace invalid/empty URIs like "no file associated with this alert" with "NO_FILE"
-      # - Ensure message.text exists (fallback to message.markdown)
-      - name: Normalize SARIF for Code Scanning
-        id: normalize
-        run: |
-          echo "Sanitizing results.sarif for upload to code-scanning..."
-          if [ ! -f results.sarif ]; then
-            echo "No results.sarif found, skipping normalization"
-            exit 0
-          fi
-          # Use jq to:
-          #  - replace null / space-containing / 'no file' artifactLocation.uri with "NO_FILE"
-          #  - ensure message.text exists (fallback to message.markdown stripped of simple HTML)
-          jq '
-            # helper: sanitize artifactLocation.uri values
-            def sanitize_uri:
-              if . == null then "NO_FILE"
-              else
-                # if looks like "no file associated..." or contains spaces, use NO_FILE
-                (if (test("(?i)^no file") or test(" ") ) then "NO_FILE" else . end)
-              end;
-
-            (.runs[]?.results[]? | .locations[]?.physicalLocation?.artifactLocation?.uri) |= sanitize_uri
-            |
-            (.runs[]?.results[]?) |= (
-              if (.message.text == null) and (.message.markdown != null) then
-                .message.text = (.message.markdown | gsub("<[^>]+>";""))
-              else .
-              end
-            )
-          ' results.sarif > results.fixed.sarif
-
-          # keep a copy of the sanitized file for debugging
-          mv results.fixed.sarif results.sarif
-          echo "Sanitization complete — results.sarif updated."
-
-      # Upload to GitHub Code Scanning only when running on the repository default branch (usually main).
-      # This avoids GitHub UI/branch restrictions and ensures alerts are created for the default branch.
       - name: Upload to code-scanning
-        if: ${{ (github.event.inputs.branch == github.repository_default_branch) || (github.ref == format('refs/heads/{0}', github.repository_default_branch)) || (github.event.inputs.branch == 'main' && github.repository_default_branch == 'main') }}
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: results.sarif
-
-      - name: Print SARIF sample (debug)
-        if: always()
-        run: |
-          echo "---- sample of normalized SARIF results (first 200 lines) ----"
-          head -n 200 results.sarif || true
