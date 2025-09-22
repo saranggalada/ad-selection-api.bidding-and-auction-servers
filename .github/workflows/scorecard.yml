@@ -3,33 +3,33 @@
 # policy, and support documentation.
 
 name: Scorecard supply-chain security
-on:
-  # For Branch-Protection check. Only the default branch is supported. See
-  # https://github.com/ossf/scorecard/blob/main/docs/checks.md#branch-protection
-  branch_protection_rule:
-  # To guarantee Maintained check is occasionally updated. See
-  # https://github.com/ossf/scorecard/blob/main/docs/checks.md#maintained
-  schedule:
-    - cron: '16 11 * * 2'
-  push:
-    branches: [ "main" ]
 # on:
-#   # Manual trigger only from any branch/environment
-#   workflow_dispatch:
-#     inputs:
-#       branch:
-#         description: 'Branch to run scorecard on'
-#         required: false
-#         default: 'main'
-#       environment:
-#         description: 'Environment to run in'
-#         required: false
-#         default: 'development'
-#         type: choice
-#         options:
-#         - development
-#         - staging
-#         - production
+#   # For Branch-Protection check. Only the default branch is supported. See
+#   # https://github.com/ossf/scorecard/blob/main/docs/checks.md#branch-protection
+#   branch_protection_rule:
+#   # To guarantee Maintained check is occasionally updated. See
+#   # https://github.com/ossf/scorecard/blob/main/docs/checks.md#maintained
+#   schedule:
+#     - cron: '16 11 * * 2'
+#   push:
+#     branches: [ "main" ]
+on:
+  # Manual trigger only from any branch/environment
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch to run scorecard on'
+        required: false
+        default: 'main'
+      environment:
+        description: 'Environment to run in'
+        required: false
+        default: 'development'
+        type: choice
+        options:
+        - development
+        - staging
+        - production
 
 # Declare default permissions as read only.
 permissions: read-all
